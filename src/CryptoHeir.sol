@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 /**
  * @title CryptoHeir
+ * @notice A time-locked fund transfer contract allowing deposits with deadlines
+ * @dev Supports deposit, claim, reclaim, and deadline extension
  */
 contract CryptoHeir {
     struct Inheritance {
@@ -13,10 +15,13 @@ contract CryptoHeir {
         bool claimed;
     }
 
+    // Mapping from inheritance ID to Inheritance struct
     mapping(uint256 => Inheritance) public inheritances;
 
+    // Counter for generating unique inheritance IDs
     uint256 public nextInheritanceId;
 
+    // Events
     event InheritanceCreated(
         uint256 indexed inheritanceId,
         address indexed depositor,
@@ -43,6 +48,7 @@ contract CryptoHeir {
         uint256 newDeadline
     );
 
+    // Errors
     error InvalidBeneficiary();
     error InvalidDeadline();
     error InsufficientAmount();
@@ -53,6 +59,12 @@ contract CryptoHeir {
     error OnlyDepositor();
     error OnlyBeneficiary();
 
+    /**
+     * @notice Deposit funds for a beneficiary with a deadline
+     * @param _beneficiary Address that can claim the funds after deadline
+     * @param _deadline Timestamp when funds become claimable
+     * @return inheritanceId The unique ID of the created inheritance
+     */
     function deposit(address _beneficiary, uint256 _deadline) external payable returns (uint256) {
         if (_beneficiary == address(0)) revert InvalidBeneficiary();
         if (_beneficiary == msg.sender) revert InvalidBeneficiary();
@@ -74,6 +86,10 @@ contract CryptoHeir {
         return inheritanceId;
     }
 
+    /**
+     * @notice Claim funds after the deadline has passed (beneficiary only)
+     * @param _inheritanceId The ID of the inheritance to claim
+     */
     function claim(uint256 _inheritanceId) external {
         Inheritance storage inheritance = inheritances[_inheritanceId];
 
@@ -91,6 +107,10 @@ contract CryptoHeir {
         require(success, "Transfer failed");
     }
 
+    /**
+     * @notice Reclaim funds before the deadline (depositor only)
+     * @param _inheritanceId The ID of the inheritance to reclaim
+     */
     function reclaim(uint256 _inheritanceId) external {
         Inheritance storage inheritance = inheritances[_inheritanceId];
 
@@ -108,6 +128,11 @@ contract CryptoHeir {
         require(success, "Transfer failed");
     }
 
+    /**
+     * @notice Extend the deadline (depositor only)
+     * @param _inheritanceId The ID of the inheritance
+     * @param _newDeadline The new deadline (must be in the future)
+     */
     function extendDeadline(uint256 _inheritanceId, uint256 _newDeadline) external {
         Inheritance storage inheritance = inheritances[_inheritanceId];
 
@@ -122,6 +147,15 @@ contract CryptoHeir {
         emit DeadlineExtended(_inheritanceId, oldDeadline, _newDeadline);
     }
 
+    /**
+     * @notice Get details of an inheritance
+     * @param _inheritanceId The ID of the inheritance
+     * @return depositor The address of the depositor
+     * @return beneficiary The address of the beneficiary
+     * @return amount The amount deposited
+     * @return deadline The deadline timestamp
+     * @return claimed Whether the inheritance has been claimed
+     */
     function getInheritance(uint256 _inheritanceId)
         external
         view
