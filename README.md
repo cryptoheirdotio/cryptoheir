@@ -27,19 +27,20 @@ A decentralized time-locked fund transfer system built on EVM-compatible blockch
 
 ```
 cryptoheir/
-├── src/                    # Smart contracts
-│   └── CryptoHeir.sol     # Main contract
-├── test/                   # Contract tests
-│   └── CryptoHeir.t.sol   # Comprehensive test suite
-├── script/                 # Deployment scripts
-│   └── Deploy.s.sol       # Deployment script
-├── frontend/               # React frontend
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── hooks/         # Custom hooks (Web3)
-│   │   └── utils/         # Contract ABI
-│   └── package.json
-└── foundry.toml           # Foundry configuration
+├── foundry/                # Foundry project
+│   ├── src/                # Smart contracts
+│   │   └── CryptoHeir.sol  # Main contract
+│   ├── test/               # Contract tests
+│   │   └── CryptoHeir.t.sol # Comprehensive test suite
+│   ├── script/             # Deployment scripts
+│   │   └── Deploy.s.sol    # Deployment script
+│   └── foundry.toml        # Foundry configuration
+└── frontend/               # React frontend
+    ├── src/
+    │   ├── components/     # React components
+    │   ├── hooks/          # Custom hooks (Web3)
+    │   └── utils/          # Contract ABI
+    └── package.json
 ```
 
 ## Smart Contract
@@ -73,7 +74,9 @@ cd cryptoheir
 
 2. Install Foundry dependencies:
 ```bash
+cd foundry
 forge install
+cd ..
 ```
 
 3. Install frontend dependencies:
@@ -86,17 +89,20 @@ npm install
 
 ### Build
 ```bash
+cd foundry
 forge build
 ```
 
 ### Test
 Run all tests with detailed output:
 ```bash
+cd foundry
 forge test -vv
 ```
 
 Run tests with gas reporting:
 ```bash
+cd foundry
 forge test --gas-report
 ```
 
@@ -111,6 +117,7 @@ anvil
 
 2. Deploy the contract:
 ```bash
+cd foundry
 forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast --private-key <anvil-private-key>
 ```
 
@@ -125,6 +132,7 @@ RPC_URL=your_rpc_url_here
 2. Deploy:
 ```bash
 source .env
+cd foundry
 forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify
 ```
 
@@ -222,6 +230,7 @@ The test suite includes:
 
 Run tests:
 ```bash
+cd foundry
 forge test -vv
 ```
 

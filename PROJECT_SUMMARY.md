@@ -112,12 +112,14 @@ CryptoHeir is a complete decentralized application (dApp) for time-locked fund t
 
 ```
 cryptoheir/
-├── src/
-│   └── CryptoHeir.sol              # Main smart contract
-├── test/
-│   └── CryptoHeir.t.sol            # Test suite (19 tests)
-├── script/
-│   └── Deploy.s.sol                # Deployment script
+├── foundry/
+│   ├── src/
+│   │   └── CryptoHeir.sol          # Main smart contract
+│   ├── test/
+│   │   └── CryptoHeir.t.sol        # Test suite (19 tests)
+│   ├── script/
+│   │   └── Deploy.s.sol            # Deployment script
+│   └── foundry.toml                # Foundry config
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
@@ -134,8 +136,7 @@ cryptoheir/
 ├── QUICKSTART.md                    # Getting started guide
 ├── PROJECT_SUMMARY.md               # This file
 ├── .env.example                     # Environment template
-├── .gitignore                       # Git ignore rules
-└── foundry.toml                     # Foundry config
+└── .gitignore                       # Git ignore rules
 ```
 
 ## Getting Started

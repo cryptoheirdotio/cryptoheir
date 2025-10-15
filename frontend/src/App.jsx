@@ -67,7 +67,7 @@ function App() {
             <div className="info-box">
               <p><strong>Note:</strong> You need to deploy the contract first or use an existing deployment.</p>
               <p>To deploy locally:</p>
-              <pre>forge script script/Deploy.s.sol --rpc-url &lt;YOUR_RPC_URL&gt; --broadcast</pre>
+              <pre>cd foundry && forge script script/Deploy.s.sol --rpc-url &lt;YOUR_RPC_URL&gt; --broadcast</pre>
             </div>
           </div>
         ) : (
