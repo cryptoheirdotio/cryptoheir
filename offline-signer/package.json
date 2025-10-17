@@ -1,0 +1,15 @@
+{
+  "name": "cryptoheir-offline-signer",
+  "version": "1.0.0",
+  "description": "Air-gapped offline transaction signing for CryptoHeir contract",
+  "type": "module",
+  "scripts": {
+    "prepare": "node prepare-transaction.js",
+    "sign": "node sign-transaction.js",
+    "broadcast": "node broadcast-transaction.js"
+  },
+  "dependencies": {
+    "ethers": "^6.9.0",
+    "dotenv": "^16.3.1"
+  }
+}

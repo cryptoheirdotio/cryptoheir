@@ -10,6 +10,9 @@ foundry/out/
 # Dotenv file
 .env
 
+# Signed transaction files
+offline-signer/signed-*.json
+
 # Node modules
 node_modules/
 
