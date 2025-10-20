@@ -20,7 +20,7 @@ This directory contains scripts for secure offline signing of CryptoHeir transac
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                        │
 │  STEP 1: PREPARE (ONLINE MACHINE)                                    │
-│  ├─ Has: RPC_URL, DEPLOYER_ADDRESS                                   │
+│  ├─ Has: RPC_URL, SIGNER_ADDRESS                                     │
 │  ├─ Does NOT have: PRIVATE_KEY                                       │
 │  └─ Runs: node prepare-transaction.js --deploy                       │
 │     → Outputs: tx-params.json (unsigned)                             │
@@ -70,7 +70,7 @@ cp .env.example .env
 
 **For ONLINE machine (prepare + broadcast):**
 ```bash
-DEPLOYER_ADDRESS=0xYOUR_ADDRESS_HERE
+SIGNER_ADDRESS=0xYOUR_ADDRESS_HERE
 INFURA_API_KEY=YOUR_INFURA_API_KEY_HERE
 ```
 
@@ -289,7 +289,7 @@ If you don't want to use Infura, set `RPC_URL` in `.env`:
 ```bash
 # In .env
 RPC_URL=https://your-custom-rpc-provider.com
-DEPLOYER_ADDRESS=0xYOUR_ADDRESS_HERE
+SIGNER_ADDRESS=0xYOUR_ADDRESS_HERE
 ```
 
 Then run without the `--network` parameter:
@@ -477,12 +477,12 @@ cp .env.example .env
 # Edit .env and add PRIVATE_KEY
 ```
 
-### Error: DEPLOYER_ADDRESS not set
+### Error: SIGNER_ADDRESS not set
 
 Ensure `.env` file exists on online machine:
 ```bash
 cp .env.example .env
-# Edit .env and add DEPLOYER_ADDRESS and RPC_URL
+# Edit .env and add SIGNER_ADDRESS and INFURA_API_KEY (or RPC_URL)
 ```
 
 ### Error: Chain ID mismatch
@@ -491,7 +491,7 @@ The transaction was prepared for a different network than you're broadcasting to
 
 ### Error: Wallet address mismatch
 
-The private key on your offline machine doesn't match the DEPLOYER_ADDRESS used to prepare the transaction.
+The private key on your offline machine doesn't match the SIGNER_ADDRESS used to prepare the transaction.
 
 ### Error: NONCE_EXPIRED
 

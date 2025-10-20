@@ -303,10 +303,11 @@ async function prepareTransaction() {
   // Get RPC URL (from network + Infura API key, or custom RPC_URL)
   const rpcUrl = getRpcUrl(parsed.options.network);
 
-  // Validate deployer address
-  const deployerAddress = process.env.DEPLOYER_ADDRESS;
-  if (!deployerAddress) {
-    console.error('Error: DEPLOYER_ADDRESS not set in .env file');
+  // Validate signer address
+  const signerAddress = process.env.SIGNER_ADDRESS;
+  if (!signerAddress) {
+    console.error('Error: SIGNER_ADDRESS not set in .env file');
+    console.error('This is the address that will sign the transaction (for deployments and function calls)');
     process.exit(1);
   }
 
@@ -319,11 +320,11 @@ async function prepareTransaction() {
 
     // Get account nonce
     console.log('\n✓ Fetching account nonce...');
-    const nonce = await provider.getTransactionCount(deployerAddress);
+    const nonce = await provider.getTransactionCount(signerAddress);
     console.log(`  Current nonce: ${nonce}`);
 
     // Check balance
-    const balance = await provider.getBalance(deployerAddress);
+    const balance = await provider.getBalance(signerAddress);
     console.log(`  Account balance: ${ethers.formatEther(balance)} ETH`);
 
     // Get fee data
@@ -380,7 +381,7 @@ async function prepareTransaction() {
 
     // Prepare transaction object for gas estimation
     const tx = {
-      from: deployerAddress,
+      from: signerAddress,
       data: txData,
       nonce: nonce,
       chainId: network.chainId
@@ -409,7 +410,7 @@ async function prepareTransaction() {
     // Build final transaction parameters
     const txParams = {
       type: txType,
-      from: deployerAddress,
+      from: signerAddress,
       to: parsed.mode === 'call' ? parsed.options.contract : null,
       data: txData,
       nonce: nonce,
