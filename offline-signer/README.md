@@ -92,7 +92,13 @@ node prepare-transaction.js --deploy --network <network-name> [options]
 ```
 
 **Required:**
-- `--network <name>`: Network name for Infura (e.g., mainnet, sepolia, polygon-mainnet, arbitrum-mainnet)
+- `--network <name>`: Network name for Infura. Supported networks:
+  - **Ethereum**: `mainnet`, `sepolia`, `holesky`
+  - **Polygon**: `polygon`, `polygon-mainnet`, `polygon-amoy`
+  - **Arbitrum**: `arbitrum`, `arbitrum-mainnet`, `arbitrum-sepolia`
+  - **Optimism**: `optimism`, `optimism-mainnet`, `optimism-sepolia`
+  - **Base**: `base`, `base-mainnet`, `base-sepolia`
+  - **Linea**: `linea`, `linea-mainnet`, `linea-sepolia`
 
 **Options:**
 - `--output <file>`: Output file (default: `tx-params.json`)
@@ -379,22 +385,46 @@ offline-signer/
 
 ## Supported Networks
 
-The scripts work with any EVM-compatible network.
+### Pre-configured Networks (via Infura)
 
-### Testnets
-- **Ethereum Sepolia**: `https://sepolia.infura.io/v3/YOUR_INFURA_KEY`
-- **Polygon Mumbai**: `https://rpc-mumbai.maticvigil.com`
-- **Arbitrum Sepolia**: `https://sepolia-rollup.arbitrum.io/rpc`
-- **Optimism Sepolia**: `https://sepolia.optimism.io`
+The following networks are pre-configured and validated:
 
-### Mainnets
-- **Ethereum Mainnet**: `https://mainnet.infura.io/v3/YOUR_INFURA_KEY`
-- **Polygon**: `https://polygon-rpc.com`
-- **Arbitrum One**: `https://arb1.arbitrum.io/rpc`
-- **Optimism**: `https://mainnet.optimism.io`
+**Ethereum Networks:**
+- `mainnet` - Ethereum Mainnet
+- `sepolia` - Ethereum Sepolia Testnet
+- `holesky` - Ethereum Holesky Testnet
 
-### Local Development
-- **Anvil**: `http://localhost:8545`
+**Polygon Networks:**
+- `polygon` or `polygon-mainnet` - Polygon Mainnet
+- `polygon-amoy` - Polygon Amoy Testnet
+
+**Arbitrum Networks:**
+- `arbitrum` or `arbitrum-mainnet` - Arbitrum One Mainnet
+- `arbitrum-sepolia` - Arbitrum Sepolia Testnet
+
+**Optimism Networks:**
+- `optimism` or `optimism-mainnet` - Optimism Mainnet
+- `optimism-sepolia` - Optimism Sepolia Testnet
+
+**Base Networks:**
+- `base` or `base-mainnet` - Base Mainnet
+- `base-sepolia` - Base Sepolia Testnet
+
+**Linea Networks:**
+- `linea` or `linea-mainnet` - Linea Mainnet
+- `linea-sepolia` - Linea Sepolia Testnet
+
+### Custom Networks
+
+For networks not in the pre-configured list, set `RPC_URL` directly in `.env`:
+
+```bash
+# Example: Local Anvil
+RPC_URL=http://localhost:8545
+
+# Example: Custom RPC provider
+RPC_URL=https://your-custom-rpc.com
+```
 
 ## Security Best Practices
 

@@ -9,6 +9,39 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
+// Pre-configured networks with Infura identifiers
+const SUPPORTED_NETWORKS = {
+  // Ethereum networks
+  'mainnet': 'mainnet',
+  'sepolia': 'sepolia',
+  'holesky': 'holesky',
+
+  // Polygon networks
+  'polygon': 'polygon-mainnet',
+  'polygon-mainnet': 'polygon-mainnet',
+  'polygon-amoy': 'polygon-amoy',
+
+  // Arbitrum networks
+  'arbitrum': 'arbitrum-mainnet',
+  'arbitrum-mainnet': 'arbitrum-mainnet',
+  'arbitrum-sepolia': 'arbitrum-sepolia',
+
+  // Optimism networks
+  'optimism': 'optimism-mainnet',
+  'optimism-mainnet': 'optimism-mainnet',
+  'optimism-sepolia': 'optimism-sepolia',
+
+  // Base networks
+  'base': 'base-mainnet',
+  'base-mainnet': 'base-mainnet',
+  'base-sepolia': 'base-sepolia',
+
+  // Linea networks
+  'linea': 'linea-mainnet',
+  'linea-mainnet': 'linea-mainnet',
+  'linea-sepolia': 'linea-sepolia'
+};
+
 /**
  * Prepare transaction parameters for offline signing (ONLINE - requires RPC)
  *
@@ -19,12 +52,14 @@ dotenv.config();
  *   Function calls:
  *     node prepare-transaction.js --call deposit --network sepolia --beneficiary <address> --deadline <timestamp> --value <eth>
  *     node prepare-transaction.js --call claim --network mainnet --inheritance-id <id>
- *     node prepare-transaction.js --call reclaim --network sepolia --inheritance-id <id>
- *     node prepare-transaction.js --call extendDeadline --network sepolia --inheritance-id <id> --deadline <timestamp>
+ *     node prepare-transaction.js --call reclaim --network polygon --inheritance-id <id>
+ *     node prepare-transaction.js --call extendDeadline --network arbitrum --inheritance-id <id> --deadline <timestamp>
  *
  * Options:
- *   --network <name>          Network name (e.g., mainnet, sepolia, polygon-mainnet, arbitrum-mainnet)
- *                             Uses INFURA_API_KEY from .env to build RPC URL
+ *   --network <name>          Pre-configured network name (required with INFURA_API_KEY)
+ *                             Supported: mainnet, sepolia, holesky, polygon, polygon-amoy,
+ *                                       arbitrum, arbitrum-sepolia, optimism, optimism-sepolia,
+ *                                       base, base-sepolia, linea, linea-sepolia
  *                             Alternatively, set RPC_URL directly in .env for custom providers
  *   --output <file>           Output file (default: tx-params.json)
  *   --gas-limit <amount>      Override gas limit
@@ -118,9 +153,23 @@ function validateArgs(parsed) {
   if (!parsed.mode) {
     console.error('Error: Must specify --deploy or --call <function>');
     console.error('\nUsage examples:');
-    console.error('  node prepare-transaction.js --deploy');
-    console.error('  node prepare-transaction.js --call deposit --beneficiary 0x... --deadline 1735689600 --value 0.1');
-    console.error('  node prepare-transaction.js --call claim --inheritance-id 0 --contract 0x...');
+    console.error('  node prepare-transaction.js --deploy --network sepolia');
+    console.error('  node prepare-transaction.js --call deposit --network sepolia --beneficiary 0x... --deadline 1735689600 --value 0.1');
+    console.error('  node prepare-transaction.js --call claim --network mainnet --inheritance-id 0 --contract 0x...');
+    process.exit(1);
+  }
+
+  // Validate network if provided
+  if (parsed.options.network && !SUPPORTED_NETWORKS[parsed.options.network]) {
+    console.error(`Error: Unsupported network: ${parsed.options.network}`);
+    console.error('\nSupported networks:');
+    console.error('  Ethereum: mainnet, sepolia, holesky');
+    console.error('  Polygon: polygon, polygon-mainnet, polygon-amoy');
+    console.error('  Arbitrum: arbitrum, arbitrum-mainnet, arbitrum-sepolia');
+    console.error('  Optimism: optimism, optimism-mainnet, optimism-sepolia');
+    console.error('  Base: base, base-mainnet, base-sepolia');
+    console.error('  Linea: linea, linea-mainnet, linea-sepolia');
+    console.error('\nAlternatively, set RPC_URL in .env for a custom provider');
     process.exit(1);
   }
 
@@ -207,7 +256,7 @@ function getRpcUrl(network) {
     return rpcUrl;
   }
 
-  // If network is provided, build Infura URL
+  // If network is provided, build Infura URL using pre-configured mapping
   if (network) {
     const infuraApiKey = process.env.INFURA_API_KEY;
     if (!infuraApiKey) {
@@ -215,7 +264,15 @@ function getRpcUrl(network) {
       console.error('Either set INFURA_API_KEY or set RPC_URL for a custom provider');
       process.exit(1);
     }
-    return `https://${network}.infura.io/v3/${infuraApiKey}`;
+
+    // Get the Infura network identifier from the mapping
+    const infuraNetwork = SUPPORTED_NETWORKS[network];
+    if (!infuraNetwork) {
+      console.error(`Error: Network '${network}' is not in the supported networks list`);
+      process.exit(1);
+    }
+
+    return `https://${infuraNetwork}.infura.io/v3/${infuraApiKey}`;
   }
 
   // Neither RPC_URL nor network provided
@@ -223,6 +280,13 @@ function getRpcUrl(network) {
   console.error('Please either:');
   console.error('  1. Use --network <name> flag and set INFURA_API_KEY in .env');
   console.error('  2. Set RPC_URL in .env for a custom provider');
+  console.error('\nSupported networks:');
+  console.error('  Ethereum: mainnet, sepolia, holesky');
+  console.error('  Polygon: polygon, polygon-mainnet, polygon-amoy');
+  console.error('  Arbitrum: arbitrum, arbitrum-mainnet, arbitrum-sepolia');
+  console.error('  Optimism: optimism, optimism-mainnet, optimism-sepolia');
+  console.error('  Base: base, base-mainnet, base-sepolia');
+  console.error('  Linea: linea, linea-mainnet, linea-sepolia');
   console.error('\nExamples:');
   console.error('  node prepare-transaction.js --deploy --network sepolia');
   console.error('  node prepare-transaction.js --deploy  # with RPC_URL in .env');
