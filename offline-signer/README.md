@@ -72,6 +72,9 @@ cp .env.example .env
 ```bash
 SIGNER_ADDRESS=0xYOUR_ADDRESS_HERE
 INFURA_API_KEY=YOUR_INFURA_API_KEY_HERE
+
+# Optional: Set default contract address for function calls
+# CONTRACT_ADDRESS=0xYOUR_CONTRACT_ADDRESS_HERE
 ```
 
 **For OFFLINE machine (sign only):**
@@ -79,7 +82,9 @@ INFURA_API_KEY=YOUR_INFURA_API_KEY_HERE
 PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
 ```
 
-**Note:** If you prefer a custom RPC provider instead of Infura, set `RPC_URL` in `.env` and don't use the `--network` parameter.
+**Notes:**
+- If you prefer a custom RPC provider instead of Infura, set `RPC_URL` in `.env` and don't use the `--network` parameter.
+- Setting `CONTRACT_ADDRESS` is optional but convenient if you frequently interact with the same contract. You can still override it with `--contract` flag.
 
 ## Usage
 
@@ -102,6 +107,7 @@ node prepare-transaction.js --deploy --network <network-name> [options]
 
 **Options:**
 - `--output <file>`: Output file (default: `tx-params.json`)
+- `--contract <address>`: Contract address (required for function calls, or set CONTRACT_ADDRESS in .env)
 - `--gas-limit <amount>`: Override gas limit
 - `--gas-price <gwei>`: Override gas price (legacy tx)
 - `--max-fee <gwei>`: Override max fee per gas (EIP-1559)
@@ -220,6 +226,12 @@ node broadcast-transaction.js signed-tx.json
 
 **Step 1: Prepare (Online)**
 ```bash
+# If CONTRACT_ADDRESS is set in .env, you can omit --contract
+node prepare-transaction.js --call claim \
+  --network sepolia \
+  --inheritance-id 0
+
+# Or specify --contract explicitly
 node prepare-transaction.js --call claim \
   --network sepolia \
   --contract 0xCONTRACT_ADDRESS \
@@ -280,6 +292,25 @@ node prepare-transaction.js --deploy \
 node prepare-transaction.js --deploy --network mainnet --output my-deploy.json
 node sign-transaction.js my-deploy.json my-signed.json
 node broadcast-transaction.js my-signed.json
+```
+
+### Using Default Contract Address
+
+If you frequently interact with the same contract, set it in `.env` to avoid typing it every time:
+
+```bash
+# In .env
+CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+```
+
+Then you can omit `--contract` flag:
+
+```bash
+# With CONTRACT_ADDRESS in .env
+node prepare-transaction.js --call claim --network sepolia --inheritance-id 0
+
+# Or override with --contract flag
+node prepare-transaction.js --call claim --network sepolia --inheritance-id 0 --contract 0xOTHER_CONTRACT
 ```
 
 ### Using Custom RPC Provider

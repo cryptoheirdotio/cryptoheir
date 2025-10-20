@@ -181,8 +181,14 @@ function validateArgs(parsed) {
       process.exit(1);
     }
 
+    // Use CONTRACT_ADDRESS from .env as default if --contract not specified
+    if (!parsed.options.contract) {
+      parsed.options.contract = process.env.CONTRACT_ADDRESS;
+    }
+
     if (!parsed.options.contract) {
       console.error('Error: --contract <address> is required for function calls');
+      console.error('Either use --contract flag or set CONTRACT_ADDRESS in .env');
       process.exit(1);
     }
 
