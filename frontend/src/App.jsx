@@ -1,20 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWeb3 } from './hooks/useWeb3';
 import { DepositForm } from './components/DepositForm';
 import { InheritanceManager } from './components/InheritanceManager';
+import { getNetworkByChainId } from './utils/networkConfig';
 import './App.css';
 
 function App() {
-  const { account, isConnected, connectWallet, disconnectWallet, initContract, contract } = useWeb3();
+  const { account, isConnected, connectWallet, disconnectWallet, initContract, contract, chainId } = useWeb3();
   const [contractAddress, setContractAddress] = useState('');
-  const [tempAddress, setTempAddress] = useState('');
+  const [networkInfo, setNetworkInfo] = useState(null);
+  const [networkError, setNetworkError] = useState('');
 
-  const handleSetContract = () => {
-    if (tempAddress) {
-      setContractAddress(tempAddress);
-      initContract(tempAddress);
+  // Auto-detect network and set contract address when wallet is connected
+  useEffect(() => {
+    if (isConnected && chainId) {
+      const network = getNetworkByChainId(Number(chainId));
+
+      if (!network) {
+        setNetworkError(`Unsupported network (Chain ID: ${chainId}). Please switch to a supported network.`);
+        setNetworkInfo(null);
+        setContractAddress('');
+        return;
+      }
+
+      if (!network.contractAddress) {
+        setNetworkError(`Contract not deployed on ${network.name}. Please configure the contract address.`);
+        setNetworkInfo(network);
+        setContractAddress('');
+        return;
+      }
+
+      setNetworkError('');
+      setNetworkInfo(network);
+      setContractAddress(network.contractAddress);
+      initContract(network.contractAddress);
+    } else {
+      setNetworkInfo(null);
+      setContractAddress('');
+      setNetworkError('');
     }
-  };
+  }, [isConnected, chainId, initContract]);
 
   return (
     <div className="App">
@@ -51,34 +76,44 @@ function App() {
               <li>Extend deadlines anytime before expiration</li>
             </ul>
           </div>
-        ) : !contract ? (
-          <div className="card contract-setup">
-            <h2>Set Contract Address</h2>
-            <p>Enter the deployed CryptoHeir contract address:</p>
-            <div className="form-group">
-              <input
-                type="text"
-                value={tempAddress}
-                onChange={(e) => setTempAddress(e.target.value)}
-                placeholder="0x..."
-              />
-              <button onClick={handleSetContract}>Set Contract</button>
-            </div>
+        ) : networkError ? (
+          <div className="card error-card">
+            <h2>Network Issue</h2>
+            <p className="error-message">{networkError}</p>
+            {networkInfo && (
+              <div className="info-box">
+                <p><strong>Current Network:</strong> {networkInfo.name}</p>
+                <p><strong>Chain ID:</strong> {networkInfo.chainId}</p>
+              </div>
+            )}
             <div className="info-box">
-              <p><strong>Note:</strong> You need to deploy the contract first or use an existing deployment.</p>
-              <p>To deploy locally:</p>
-              <pre>cd foundry && forge script script/Deploy.s.sol --rpc-url &lt;YOUR_RPC_URL&gt; --broadcast</pre>
+              <p><strong>Supported Networks:</strong></p>
+              <ul>
+                <li>Sepolia Testnet (Chain ID: 11155111)</li>
+                <li>Ethereum Mainnet (Chain ID: 1)</li>
+                <li>Polygon Mainnet (Chain ID: 137)</li>
+                <li>Polygon Mumbai Testnet (Chain ID: 80001)</li>
+                <li>BSC Mainnet (Chain ID: 56)</li>
+                <li>BSC Testnet (Chain ID: 97)</li>
+              </ul>
+              <p>Please switch your network in MetaMask to continue.</p>
             </div>
           </div>
-        ) : (
+        ) : contract ? (
           <div className="content">
             <div className="info-banner">
-              <strong>Contract:</strong> {contractAddress?.slice(0, 10)}...{contractAddress?.slice(-8)}
+              <strong>Network:</strong> {networkInfo?.name} |
+              <strong> Contract:</strong> {contractAddress?.slice(0, 10)}...{contractAddress?.slice(-8)}
             </div>
             <div className="grid">
               <DepositForm contract={contract} account={account} />
               <InheritanceManager contract={contract} account={account} />
             </div>
+          </div>
+        ) : (
+          <div className="card">
+            <h2>Loading...</h2>
+            <p>Initializing contract...</p>
           </div>
         )}
       </main>
