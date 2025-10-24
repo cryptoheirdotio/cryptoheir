@@ -54,49 +54,68 @@ export const DepositForm = ({ contract, account }) => {
   };
 
   return (
-    <div className="card">
-      <h2>Create Inheritance</h2>
-      <form onSubmit={handleDeposit}>
-        <div className="form-group">
-          <label>Beneficiary Address:</label>
-          <input
-            type="text"
-            value={beneficiary}
-            onChange={(e) => setBeneficiary(e.target.value)}
-            placeholder="0x..."
-            required
-            disabled={loading}
-          />
-        </div>
-        <div className="form-group">
-          <label>Amount (ETH):</label>
-          <input
-            type="number"
-            step="0.001"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.1"
-            required
-            disabled={loading}
-          />
-        </div>
-        <div className="form-group">
-          <label>Lock Period (days):</label>
-          <input
-            type="number"
-            value={days}
-            onChange={(e) => setDays(e.target.value)}
-            placeholder="30"
-            required
-            disabled={loading}
-          />
-        </div>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Processing...' : 'Deposit'}
-        </button>
-      </form>
-      {error && <div className="error">{error}</div>}
-      {success && <div className="success">{success}</div>}
+    <div className="card bg-base-100 shadow-xl">
+      <div className="card-body">
+        <h2 className="card-title text-2xl">Create Inheritance</h2>
+        <form onSubmit={handleDeposit} className="space-y-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Beneficiary Address:</span>
+            </label>
+            <input
+              type="text"
+              value={beneficiary}
+              onChange={(e) => setBeneficiary(e.target.value)}
+              placeholder="0x..."
+              className="input input-bordered w-full"
+              required
+              disabled={loading}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Amount (ETH):</span>
+            </label>
+            <input
+              type="number"
+              step="0.001"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.1"
+              className="input input-bordered w-full"
+              required
+              disabled={loading}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Lock Period (days):</span>
+            </label>
+            <input
+              type="number"
+              value={days}
+              onChange={(e) => setDays(e.target.value)}
+              placeholder="30"
+              className="input input-bordered w-full"
+              required
+              disabled={loading}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+            {loading ? 'Processing...' : 'Deposit'}
+          </button>
+        </form>
+        {error && (
+          <div className="alert alert-error mt-4">
+            <span>{error}</span>
+          </div>
+        )}
+        {success && (
+          <div className="alert alert-success mt-4">
+            <span>{success}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

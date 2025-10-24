@@ -2,63 +2,73 @@ import { NavLink } from 'react-router-dom';
 
 export function Navigation({ account, isConnected, connectWallet, disconnectWallet }) {
   return (
-    <nav className="navigation">
-      <div className="nav-brand">
-        <h1>CryptoHeir</h1>
-        <p className="nav-subtitle">Time-locked fund transfers</p>
+    <div className="navbar bg-base-100 shadow-lg">
+      <div className="navbar-start">
+        <div>
+          <h1 className="text-2xl font-bold">CryptoHeir</h1>
+          <p className="text-xs opacity-70">Time-locked fund transfers</p>
+        </div>
       </div>
 
-      <div className="nav-links">
-        <NavLink
-          to="/"
-          className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-          end
-        >
-          Home
-        </NavLink>
-        {isConnected ? (
-          <>
+      <div className="navbar-center hidden lg:flex">
+        <ul className="menu menu-horizontal px-1">
+          <li>
             <NavLink
-              to="/deposit"
-              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              to="/"
+              className={({ isActive }) => isActive ? 'active' : ''}
+              end
             >
-              Deposit
+              Home
             </NavLink>
-            <NavLink
-              to="/manage"
-              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-            >
-              Manage
-            </NavLink>
-          </>
-        ) : (
-          <>
-            <span className="nav-link disabled">
-              Deposit
-            </span>
-            <span className="nav-link disabled">
-              Manage
-            </span>
-          </>
-        )}
+          </li>
+          {isConnected ? (
+            <>
+              <li>
+                <NavLink
+                  to="/deposit"
+                  className={({ isActive }) => isActive ? 'active' : ''}
+                >
+                  Deposit
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/manage"
+                  className={({ isActive }) => isActive ? 'active' : ''}
+                >
+                  Manage
+                </NavLink>
+              </li>
+            </>
+          ) : (
+            <>
+              <li className="disabled">
+                <span className="opacity-50 cursor-not-allowed">Deposit</span>
+              </li>
+              <li className="disabled">
+                <span className="opacity-50 cursor-not-allowed">Manage</span>
+              </li>
+            </>
+          )}
+        </ul>
       </div>
 
-      <div className="wallet-section">
+      <div className="navbar-end gap-2">
         {!isConnected ? (
-          <button className="connect-btn" onClick={connectWallet}>
+          <button className="btn btn-primary" onClick={connectWallet}>
             Connect Wallet
           </button>
         ) : (
-          <div className="connected">
-            <span className="account">
+          <>
+            <div className="badge badge-outline">
               {account?.slice(0, 6)}...{account?.slice(-4)}
-            </span>
-            <button className="disconnect-btn" onClick={disconnectWallet}>
+            </div>
+            <button className="btn btn-outline btn-sm" onClick={disconnectWallet}>
               Disconnect
             </button>
-          </div>
+          </>
         )}
       </div>
-    </nav>
+    </div>
   );
 }

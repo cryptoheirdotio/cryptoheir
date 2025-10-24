@@ -108,67 +108,117 @@ export const InheritanceManager = ({ contract, account }) => {
     inheritanceData.depositor.toLowerCase() === account?.toLowerCase();
 
   return (
-    <div className="card">
-      <h2>Manage Inheritance</h2>
-      <div className="form-group">
-        <label>Inheritance ID:</label>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <input
-            type="number"
-            value={inheritanceId}
-            onChange={(e) => setInheritanceId(e.target.value)}
-            placeholder="0"
-            disabled={loading}
-          />
-          <button onClick={loadInheritance} disabled={loading || !inheritanceId}>
-            Load
-          </button>
-        </div>
-      </div>
-
-      {inheritanceData && (
-        <div className="inheritance-details">
-          <h3>Details</h3>
-          <p><strong>Depositor:</strong> {inheritanceData.depositor}</p>
-          <p><strong>Beneficiary:</strong> {inheritanceData.beneficiary}</p>
-          <p><strong>Amount:</strong> {inheritanceData.amount} ETH</p>
-          <p><strong>Deadline:</strong> {inheritanceData.deadline}</p>
-          <p><strong>Status:</strong> {inheritanceData.claimed ? 'Claimed' : 'Active'}</p>
-
-          <div className="actions">
-            {canClaim && (
-              <button onClick={handleClaim} disabled={loading}>
-                Claim Funds
-              </button>
-            )}
-            {canReclaim && (
-              <button onClick={handleReclaim} disabled={loading}>
-                Reclaim Funds
-              </button>
-            )}
-            {canExtend && (
-              <div className="extend-section">
-                <label>Extend by (days):</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input
-                    type="number"
-                    value={newDays}
-                    onChange={(e) => setNewDays(e.target.value)}
-                    placeholder="30"
-                    disabled={loading}
-                  />
-                  <button onClick={handleExtend} disabled={loading}>
-                    Extend Deadline
-                  </button>
-                </div>
-              </div>
-            )}
+    <div className="card bg-base-100 shadow-xl">
+      <div className="card-body">
+        <h2 className="card-title text-2xl">Manage Inheritance</h2>
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">Inheritance ID:</span>
+          </label>
+          <div className="join">
+            <input
+              type="number"
+              value={inheritanceId}
+              onChange={(e) => setInheritanceId(e.target.value)}
+              placeholder="0"
+              className="input input-bordered join-item flex-1"
+              disabled={loading}
+            />
+            <button
+              className="btn btn-primary join-item"
+              onClick={loadInheritance}
+              disabled={loading || !inheritanceId}
+            >
+              Load
+            </button>
           </div>
         </div>
-      )}
 
-      {error && <div className="error">{error}</div>}
-      {success && <div className="success">{success}</div>}
+        {inheritanceData && (
+          <div className="mt-4">
+            <div className="divider">Details</div>
+            <div className="stats shadow w-full mb-4">
+              <div className="stat">
+                <div className="stat-title">Depositor</div>
+                <div className="stat-value text-sm break-all">{inheritanceData.depositor}</div>
+              </div>
+            </div>
+            <div className="stats shadow w-full mb-4">
+              <div className="stat">
+                <div className="stat-title">Beneficiary</div>
+                <div className="stat-value text-sm break-all">{inheritanceData.beneficiary}</div>
+              </div>
+            </div>
+            <div className="stats stats-vertical lg:stats-horizontal shadow w-full mb-4">
+              <div className="stat">
+                <div className="stat-title">Amount</div>
+                <div className="stat-value text-2xl">{inheritanceData.amount} ETH</div>
+              </div>
+              <div className="stat">
+                <div className="stat-title">Status</div>
+                <div className="stat-value text-2xl">
+                  <span className={`badge ${inheritanceData.claimed ? 'badge-error' : 'badge-success'} badge-lg`}>
+                    {inheritanceData.claimed ? 'Claimed' : 'Active'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="alert">
+              <div>
+                <div className="font-bold">Deadline</div>
+                <div className="text-xs">{inheritanceData.deadline}</div>
+              </div>
+            </div>
+
+            <div className="card-actions flex-col mt-4">
+              {canClaim && (
+                <button className="btn btn-success w-full" onClick={handleClaim} disabled={loading}>
+                  Claim Funds
+                </button>
+              )}
+              {canReclaim && (
+                <button className="btn btn-warning w-full" onClick={handleReclaim} disabled={loading}>
+                  Reclaim Funds
+                </button>
+              )}
+              {canExtend && (
+                <div className="w-full">
+                  <div className="divider">Extend Deadline</div>
+                  <div className="form-control mt-2">
+                    <label className="label">
+                      <span className="label-text">Extend by (days):</span>
+                    </label>
+                    <div className="join">
+                      <input
+                        type="number"
+                        value={newDays}
+                        onChange={(e) => setNewDays(e.target.value)}
+                        placeholder="30"
+                        className="input input-bordered join-item flex-1"
+                        disabled={loading}
+                      />
+                      <button className="btn btn-primary join-item" onClick={handleExtend} disabled={loading}>
+                        Extend
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="alert alert-error mt-4">
+            <span>{error}</span>
+          </div>
+        )}
+        {success && (
+          <div className="alert alert-success mt-4">
+            <span>{success}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

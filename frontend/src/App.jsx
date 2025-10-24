@@ -6,7 +6,6 @@ import { Home } from './pages/Home';
 import { Deposit } from './pages/Deposit';
 import { Manage } from './pages/Manage';
 import { getNetworkByChainId } from './utils/networkConfig';
-import './App.css';
 
 function App() {
   const { account, isConnected, connectWallet, disconnectWallet, initContract, contract, chainId, signer } = useWeb3();

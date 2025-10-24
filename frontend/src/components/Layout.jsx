@@ -23,14 +23,14 @@ export function Layout({
   }
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Navigation
         account={account}
         isConnected={isConnected}
         connectWallet={connectWallet}
         disconnectWallet={disconnectWallet}
       />
-      <main className="main">
+      <main className="flex-1 container mx-auto px-4 py-8">
         {!isConnected ? (
           <WelcomeScreen />
         ) : networkError ? (
@@ -41,9 +41,11 @@ export function Layout({
           <Outlet context={{ contract, account, networkInfo }} />
         )}
       </main>
-      <footer className="footer">
-        <p>Built with Foundry & React</p>
+      <footer className="footer footer-center p-4 bg-base-300 text-base-content">
+        <div>
+          <p>Built with Foundry & React</p>
+        </div>
       </footer>
-    </>
+    </div>
   );
 }
