@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-export const InheritanceManager = ({ contract, account }) => {
-  const [inheritanceId, setInheritanceId] = useState('');
+export const InheritanceManager = ({ contract, account, initialId }) => {
+  const [inheritanceId, setInheritanceId] = useState(initialId || '');
   const [inheritanceData, setInheritanceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [newDays, setNewDays] = useState('30');
 
-  const loadInheritance = async () => {
+  const loadInheritance = async (idToLoad) => {
+    const id = idToLoad || inheritanceId;
     setError('');
     setSuccess('');
     setLoading(true);
@@ -19,7 +20,7 @@ export const InheritanceManager = ({ contract, account }) => {
         throw new Error('Contract not initialized');
       }
 
-      const data = await contract.getInheritance(inheritanceId);
+      const data = await contract.getInheritance(id);
 
       setInheritanceData({
         depositor: data[0],
@@ -106,6 +107,13 @@ export const InheritanceManager = ({ contract, account }) => {
   const canExtend = inheritanceData &&
     !inheritanceData.claimed &&
     inheritanceData.depositor.toLowerCase() === account?.toLowerCase();
+
+  // Auto-load inheritance if initialId is provided
+  useEffect(() => {
+    if (initialId && contract) {
+      loadInheritance(initialId);
+    }
+  }, [initialId, contract]);
 
   return (
     <div className="card bg-base-100 shadow-xl">

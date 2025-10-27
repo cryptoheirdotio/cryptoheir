@@ -14,7 +14,7 @@ export function Layout({
   contract
 }) {
   const location = useLocation();
-  const protectedPaths = ['/deposit', '/manage'];
+  const protectedPaths = ['/deposit', '/manage', '/history'];
   const isProtectedPath = protectedPaths.includes(location.pathname);
 
   // Redirect to home if trying to access protected routes without wallet connection

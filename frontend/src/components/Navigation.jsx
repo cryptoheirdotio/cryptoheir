@@ -39,6 +39,14 @@ export function Navigation({ account, isConnected, connectWallet, disconnectWall
                   Manage
                 </NavLink>
               </li>
+              <li>
+                <NavLink
+                  to="/history"
+                  className={({ isActive }) => isActive ? 'active' : ''}
+                >
+                  History
+                </NavLink>
+              </li>
             </>
           ) : (
             <>
@@ -47,6 +55,9 @@ export function Navigation({ account, isConnected, connectWallet, disconnectWall
               </li>
               <li className="disabled">
                 <span className="opacity-50 cursor-not-allowed">Manage</span>
+              </li>
+              <li className="disabled">
+                <span className="opacity-50 cursor-not-allowed">History</span>
               </li>
             </>
           )}

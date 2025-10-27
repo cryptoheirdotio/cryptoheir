@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { Deposit } from './pages/Deposit';
 import { Manage } from './pages/Manage';
+import { History } from './pages/History';
 import { getNetworkByChainId } from './utils/networkConfig';
 
 function App() {
@@ -63,6 +64,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/deposit" element={<Deposit />} />
             <Route path="/manage" element={<Manage />} />
+            <Route path="/history" element={<History />} />
           </Route>
         </Routes>
       </div>
