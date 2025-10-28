@@ -2,6 +2,9 @@
 foundry/cache/
 foundry/out/
 
+# Python virtual environment for Slither
+foundry/slither-env/
+
 # Ignores development broadcast logs
 !/foundry/broadcast
 /foundry/broadcast/*/31337/
