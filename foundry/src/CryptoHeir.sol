@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 /**
  * @title CryptoHeir
  * @notice A time-locked fund transfer contract allowing deposits with deadlines
  * @dev Supports deposit, claim, reclaim, and deadline extension
  */
-contract CryptoHeir {
+contract CryptoHeir is ReentrancyGuard {
     struct Inheritance {
         address depositor;
         address beneficiary;
@@ -90,7 +92,7 @@ contract CryptoHeir {
      * @notice Claim funds after the deadline has passed (beneficiary only)
      * @param _inheritanceId The ID of the inheritance to claim
      */
-    function claim(uint256 _inheritanceId) external {
+    function claim(uint256 _inheritanceId) external nonReentrant {
         Inheritance storage inheritance = inheritances[_inheritanceId];
 
         if (inheritance.depositor == address(0)) revert InheritanceNotFound();
@@ -111,7 +113,7 @@ contract CryptoHeir {
      * @notice Reclaim funds before the deadline (depositor only)
      * @param _inheritanceId The ID of the inheritance to reclaim
      */
-    function reclaim(uint256 _inheritanceId) external {
+    function reclaim(uint256 _inheritanceId) external nonReentrant {
         Inheritance storage inheritance = inheritances[_inheritanceId];
 
         if (inheritance.depositor == address(0)) revert InheritanceNotFound();
