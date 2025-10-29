@@ -325,4 +325,198 @@ contract CryptoHeirTest is Test {
         vm.expectRevert(CryptoHeir.InheritanceNotFound.selector);
         cryptoHeir.claim(999);
     }
+
+    // ============ FUZZ TESTS ============
+
+    function testFuzz_Deposit(uint256 amount, uint256 timeOffset, address fuzzBeneficiary) public {
+        // Bound inputs to reasonable ranges
+        amount = bound(amount, 1, 1000 ether);
+        timeOffset = bound(timeOffset, 1, 365 days);
+        vm.assume(fuzzBeneficiary != address(0));
+        vm.assume(fuzzBeneficiary != depositor);
+
+        uint256 fuzzDeadline = block.timestamp + timeOffset;
+
+        vm.deal(depositor, amount + 1 ether);
+        vm.prank(depositor);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(fuzzBeneficiary, fuzzDeadline);
+
+        (
+            address _depositor,
+            address _beneficiary,
+            uint256 _amount,
+            uint256 _deadline,
+            bool _claimed
+        ) = cryptoHeir.getInheritance(inheritanceId);
+
+        assertEq(_depositor, depositor);
+        assertEq(_beneficiary, fuzzBeneficiary);
+        assertEq(_amount, amount);
+        assertEq(_deadline, fuzzDeadline);
+        assertFalse(_claimed);
+        assertEq(address(cryptoHeir).balance, amount);
+    }
+
+    function testFuzz_DepositRejectsInvalidDeadlines(uint256 amount, uint256 invalidDeadline) public {
+        amount = bound(amount, 1, 1000 ether);
+        // Ensure deadline is always <= block.timestamp (invalid)
+        invalidDeadline = bound(invalidDeadline, 0, block.timestamp);
+
+        vm.deal(depositor, amount + 1 ether);
+        vm.prank(depositor);
+        vm.expectRevert(CryptoHeir.InvalidDeadline.selector);
+        cryptoHeir.deposit{value: amount}(beneficiary, invalidDeadline);
+    }
+
+    function testFuzz_ClaimAfterDeadline(uint96 amount, uint32 waitTime) public {
+        // Use smaller types to avoid overflow
+        amount = uint96(bound(uint256(amount), 1 wei, 100 ether));
+        waitTime = uint32(bound(uint256(waitTime), 1, 30 days));
+
+        uint256 fuzzDeadline = block.timestamp + 1 days;
+
+        vm.deal(depositor, amount + 1 ether);
+        vm.prank(depositor);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, fuzzDeadline);
+
+        // Warp to after deadline
+        vm.warp(fuzzDeadline + waitTime);
+
+        uint256 balanceBefore = beneficiary.balance;
+        vm.prank(beneficiary);
+        cryptoHeir.claim(inheritanceId);
+
+        assertEq(beneficiary.balance - balanceBefore, amount);
+        (, , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
+        assertTrue(claimed);
+        assertEq(address(cryptoHeir).balance, 0);
+    }
+
+    function testFuzz_ClaimRevertsBeforeDeadline(uint96 amount, uint32 timeBeforeDeadline) public {
+        amount = uint96(bound(uint256(amount), 1 wei, 100 ether));
+        timeBeforeDeadline = uint32(bound(uint256(timeBeforeDeadline), 1, 30 days));
+
+        uint256 fuzzDeadline = block.timestamp + 30 days;
+
+        vm.deal(depositor, amount + 1 ether);
+        vm.prank(depositor);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, fuzzDeadline);
+
+        // Warp to before deadline
+        vm.warp(fuzzDeadline - timeBeforeDeadline);
+
+        vm.prank(beneficiary);
+        vm.expectRevert(CryptoHeir.DeadlineNotReached.selector);
+        cryptoHeir.claim(inheritanceId);
+    }
+
+    function testFuzz_ReclaimBeforeDeadline(uint96 amount, uint32 timeBeforeDeadline) public {
+        amount = uint96(bound(uint256(amount), 1 wei, 100 ether));
+        timeBeforeDeadline = uint32(bound(uint256(timeBeforeDeadline), 1, 30 days));
+
+        uint256 fuzzDeadline = block.timestamp + 30 days;
+
+        vm.deal(depositor, amount + 1 ether);
+        vm.prank(depositor);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, fuzzDeadline);
+
+        // Warp to before deadline
+        uint256 reclaimTime = fuzzDeadline - timeBeforeDeadline;
+        vm.warp(reclaimTime);
+
+        uint256 balanceBefore = depositor.balance;
+        vm.prank(depositor);
+        cryptoHeir.reclaim(inheritanceId);
+
+        assertEq(depositor.balance - balanceBefore, amount);
+        (, , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
+        assertTrue(claimed);
+        assertEq(address(cryptoHeir).balance, 0);
+    }
+
+    function testFuzz_ReclaimRevertsAfterDeadline(uint96 amount, uint32 timeAfterDeadline) public {
+        amount = uint96(bound(uint256(amount), 1 wei, 100 ether));
+        timeAfterDeadline = uint32(bound(uint256(timeAfterDeadline), 1, 30 days));
+
+        uint256 fuzzDeadline = block.timestamp + 1 days;
+
+        vm.deal(depositor, amount + 1 ether);
+        vm.prank(depositor);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, fuzzDeadline);
+
+        // Warp to after deadline
+        vm.warp(fuzzDeadline + timeAfterDeadline);
+
+        vm.prank(depositor);
+        vm.expectRevert(CryptoHeir.DeadlineAlreadyPassed.selector);
+        cryptoHeir.reclaim(inheritanceId);
+    }
+
+    function testFuzz_ExtendDeadline(uint96 amount, uint32 extension) public {
+        amount = uint96(bound(uint256(amount), 1 wei, 100 ether));
+        extension = uint32(bound(uint256(extension), 1 days, 365 days));
+
+        uint256 initialDeadline = block.timestamp + 30 days;
+
+        vm.deal(depositor, amount + 1 ether);
+        vm.prank(depositor);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, initialDeadline);
+
+        uint256 newDeadline = block.timestamp + 30 days + extension;
+
+        vm.prank(depositor);
+        cryptoHeir.extendDeadline(inheritanceId, newDeadline);
+
+        (, , , uint256 _deadline, ) = cryptoHeir.getInheritance(inheritanceId);
+        assertEq(_deadline, newDeadline);
+    }
+
+    function testFuzz_MultipleInheritances(uint8 count) public {
+        count = uint8(bound(uint256(count), 1, 20));
+
+        vm.deal(depositor, 1000 ether);
+
+        for (uint256 i = 0; i < count; i++) {
+            vm.prank(depositor);
+            uint256 id = cryptoHeir.deposit{value: 1 ether}(
+                beneficiary,
+                block.timestamp + 30 days + (i * 1 days)
+            );
+            assertEq(id, i);
+        }
+
+        assertEq(cryptoHeir.nextInheritanceId(), count);
+        assertEq(address(cryptoHeir).balance, uint256(count) * 1 ether);
+    }
+
+    function testFuzz_ContractBalanceAccounting(uint8 depositCount, uint96 baseAmount) public {
+        depositCount = uint8(bound(uint256(depositCount), 1, 10));
+        baseAmount = uint96(bound(uint256(baseAmount), 1 wei, 10 ether));
+
+        vm.deal(depositor, type(uint96).max);
+
+        uint256 totalDeposited = 0;
+
+        // Create multiple inheritances
+        for (uint256 i = 0; i < depositCount; i++) {
+            uint256 amount = baseAmount + (i * 0.1 ether);
+            vm.prank(depositor);
+            cryptoHeir.deposit{value: amount}(beneficiary, block.timestamp + 30 days);
+            totalDeposited += amount;
+        }
+
+        // Verify contract balance matches total deposits
+        assertEq(address(cryptoHeir).balance, totalDeposited);
+
+        // Warp past deadline and claim all
+        vm.warp(block.timestamp + 31 days);
+
+        for (uint256 i = 0; i < depositCount; i++) {
+            vm.prank(beneficiary);
+            cryptoHeir.claim(i);
+        }
+
+        // Verify contract is empty after all claims
+        assertEq(address(cryptoHeir).balance, 0);
+    }
 }
