@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { useWeb3 } from './hooks/useWeb3';
+import { useAccount, useChainId } from 'wagmi';
 import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { Deposit } from './pages/Deposit';
@@ -9,7 +9,10 @@ import { History } from './pages/History';
 import { getNetworkByChainId } from './utils/networkConfig';
 
 function App() {
-  const { account, isConnected, connectWallet, disconnectWallet, initContract, contract, chainId, signer } = useWeb3();
+  // Wagmi hooks for wallet connection state
+  const { address: account, isConnected } = useAccount();
+  const chainId = useChainId();
+
   const [contractAddress, setContractAddress] = useState('');
   const [networkInfo, setNetworkInfo] = useState(null);
   const [networkError, setNetworkError] = useState('');
@@ -36,13 +39,12 @@ function App() {
       setNetworkError('');
       setNetworkInfo(network);
       setContractAddress(network.contractAddress);
-      initContract(network.contractAddress);
     } else {
       setNetworkInfo(null);
       setContractAddress('');
       setNetworkError('');
     }
-  }, [isConnected, chainId, signer]);
+  }, [isConnected, chainId]);
 
   return (
     <BrowserRouter>
@@ -53,11 +55,9 @@ function App() {
               <Layout
                 account={account}
                 isConnected={isConnected}
-                connectWallet={connectWallet}
-                disconnectWallet={disconnectWallet}
                 networkError={networkError}
                 networkInfo={networkInfo}
-                contract={contract}
+                contractAddress={contractAddress}
               />
             }
           >
