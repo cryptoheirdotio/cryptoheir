@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
-export function Navigation({ account, isConnected, connectWallet, disconnectWallet }) {
+export function Navigation({ account, isConnected }) {
   return (
     <div className="navbar bg-base-100 shadow-lg">
       <div className="navbar-start">
@@ -64,21 +65,8 @@ export function Navigation({ account, isConnected, connectWallet, disconnectWall
         </ul>
       </div>
 
-      <div className="navbar-end gap-2">
-        {!isConnected ? (
-          <button className="btn btn-primary" onClick={connectWallet}>
-            Connect Wallet
-          </button>
-        ) : (
-          <>
-            <div className="badge badge-outline">
-              {account?.slice(0, 6)}...{account?.slice(-4)}
-            </div>
-            <button className="btn btn-outline btn-sm" onClick={disconnectWallet}>
-              Disconnect
-            </button>
-          </>
-        )}
+      <div className="navbar-end">
+        <ConnectButton />
       </div>
     </div>
   );

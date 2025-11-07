@@ -7,11 +7,9 @@ import { LoadingScreen } from './LoadingScreen';
 export function Layout({
   account,
   isConnected,
-  connectWallet,
-  disconnectWallet,
   networkError,
   networkInfo,
-  contract
+  contractAddress
 }) {
   const location = useLocation();
   const protectedPaths = ['/deposit', '/manage', '/history'];
@@ -27,18 +25,16 @@ export function Layout({
       <Navigation
         account={account}
         isConnected={isConnected}
-        connectWallet={connectWallet}
-        disconnectWallet={disconnectWallet}
       />
       <main className="flex-1 container mx-auto px-4 py-8">
         {!isConnected ? (
           <WelcomeScreen />
         ) : networkError ? (
           <NetworkErrorScreen networkError={networkError} networkInfo={networkInfo} />
-        ) : !contract ? (
+        ) : !contractAddress ? (
           <LoadingScreen />
         ) : (
-          <Outlet context={{ contract, account, networkInfo }} />
+          <Outlet context={{ contractAddress, account, networkInfo }} />
         )}
       </main>
       <footer className="footer footer-center p-4 bg-base-300 text-base-content">
