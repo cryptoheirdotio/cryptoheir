@@ -13,7 +13,7 @@ export function Manage() {
           <strong>Network:</strong> {networkInfo.name} | <strong>Contract:</strong> {contract.target.slice(0, 10)}...{contract.target.slice(-8)}
         </div>
       </div>
-      <InheritanceManager contract={contract} account={account} initialId={idFromUrl} />
+      <InheritanceManager account={account} initialId={idFromUrl} />
     </>
   );
 }

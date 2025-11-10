@@ -14,7 +14,7 @@ export function Home() {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DepositForm contract={contract} account={account} />
-        <InheritanceManager contract={contract} account={account} />
+        <InheritanceManager account={account} />
       </div>
     </>
   );
