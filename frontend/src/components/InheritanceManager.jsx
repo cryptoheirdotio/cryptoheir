@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { useOutletContext } from 'react-router-dom';
+import { usePublicClient, useWalletClient } from 'wagmi';
+import { formatEther } from 'viem';
+import contractABI from '../utils/CryptoHeirABI.json';
 
-export const InheritanceManager = ({ contract, account, initialId }) => {
+export const InheritanceManager = ({ account, initialId }) => {
+  const { contractAddress } = useOutletContext();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
   const [inheritanceId, setInheritanceId] = useState(initialId || '');
   const [inheritanceData, setInheritanceData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,16 +22,21 @@ export const InheritanceManager = ({ contract, account, initialId }) => {
     setLoading(true);
 
     try {
-      if (!contract) {
+      if (!contractAddress || !publicClient) {
         throw new Error('Contract not initialized');
       }
 
-      const data = await contract.getInheritance(id);
+      const data = await publicClient.readContract({
+        address: contractAddress,
+        abi: contractABI,
+        functionName: 'getInheritance',
+        args: [BigInt(id)],
+      });
 
       setInheritanceData({
         depositor: data[0],
         beneficiary: data[1],
-        amount: ethers.formatEther(data[2]),
+        amount: formatEther(data[2]),
         deadline: new Date(Number(data[3]) * 1000).toLocaleString(),
         deadlineTimestamp: Number(data[3]),
         claimed: data[4],
@@ -110,10 +121,10 @@ export const InheritanceManager = ({ contract, account, initialId }) => {
 
   // Auto-load inheritance if initialId is provided
   useEffect(() => {
-    if (initialId && contract) {
+    if (initialId && contractAddress && publicClient) {
       loadInheritance(initialId);
     }
-  }, [initialId, contract]);
+  }, [initialId, contractAddress, publicClient]);
 
   return (
     <div className="card bg-base-100 shadow-xl">
