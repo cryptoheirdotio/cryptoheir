@@ -1,57 +1,95 @@
-import { useState } from 'react';
-import { ethers } from 'ethers';
+import { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
+import { parseEther, isAddress, decodeEventLog } from 'viem';
+import contractABI from '../utils/CryptoHeirABI.json';
 
-export const DepositForm = ({ contract, account }) => {
+export const DepositForm = ({ account }) => {
+  const { contractAddress } = useOutletContext();
+  const publicClient = usePublicClient();
+  const { writeContract, data: hash, isPending, isError: isWriteError, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed, data: receipt } = useWaitForTransactionReceipt({ hash });
   const [beneficiary, setBeneficiary] = useState('');
   const [amount, setAmount] = useState('');
   const [days, setDays] = useState('30');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const loading = isPending || isConfirming;
 
   const handleDeposit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setLoading(true);
 
     try {
-      if (!contract) {
+      if (!contractAddress) {
         throw new Error('Contract not initialized');
       }
 
-      if (!ethers.isAddress(beneficiary)) {
+      if (!isAddress(beneficiary)) {
         throw new Error('Invalid beneficiary address');
       }
 
       const deadline = Math.floor(Date.now() / 1000) + parseInt(days) * 24 * 60 * 60;
-      const value = ethers.parseEther(amount);
+      const value = parseEther(amount);
 
-      const tx = await contract.deposit(beneficiary, deadline, { value });
-      const receipt = await tx.wait();
+      writeContract({
+        address: contractAddress,
+        abi: contractABI,
+        functionName: 'deposit',
+        args: [beneficiary, BigInt(deadline)],
+        value,
+      });
+    } catch (err) {
+      console.error('Deposit error:', err);
+      setError(err.message || 'Failed to deposit');
+    }
+  };
 
-      // Get inheritance ID from event
-      const event = receipt.logs.find(
-        (log) => log.topics[0] === contract.interface.getEvent('InheritanceCreated').topicHash
-      );
-
+  // Handle transaction confirmation and event parsing
+  useEffect(() => {
+    if (isConfirmed && receipt) {
+      // Parse InheritanceCreated event from logs
       let inheritanceId = 'unknown';
-      if (event) {
-        const parsedLog = contract.interface.parseLog(event);
-        inheritanceId = parsedLog.args.inheritanceId.toString();
+
+      try {
+        const createdEvent = contractABI.find(item => item.type === 'event' && item.name === 'InheritanceCreated');
+
+        for (const log of receipt.logs) {
+          try {
+            const decoded = decodeEventLog({
+              abi: contractABI,
+              data: log.data,
+              topics: log.topics,
+            });
+
+            if (decoded.eventName === 'InheritanceCreated') {
+              inheritanceId = decoded.args.inheritanceId.toString();
+              break;
+            }
+          } catch (e) {
+            // Skip logs that don't match
+            continue;
+          }
+        }
+      } catch (err) {
+        console.error('Error parsing event:', err);
       }
 
       setSuccess(`Successfully deposited! Inheritance ID: ${inheritanceId}`);
       setBeneficiary('');
       setAmount('');
       setDays('30');
-    } catch (err) {
-      console.error('Deposit error:', err);
-      setError(err.message || 'Failed to deposit');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [isConfirmed, receipt]);
+
+  // Handle write errors
+  useEffect(() => {
+    if (isWriteError && writeError) {
+      setError(writeError.message || 'Failed to deposit');
+    }
+  }, [isWriteError, writeError]);
 
   return (
     <div className="card bg-base-100 shadow-xl">
