@@ -1,25 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { usePublicClient, useWalletClient } from 'wagmi';
+import { usePublicClient, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther } from 'viem';
 import contractABI from '../utils/CryptoHeirABI.json';
 
 export const InheritanceManager = ({ account, initialId }) => {
   const { contractAddress } = useOutletContext();
   const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
+  const { writeContract, data: hash, isPending } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
   const [inheritanceId, setInheritanceId] = useState(initialId || '');
   const [inheritanceData, setInheritanceData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingRead, setLoadingRead] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [newDays, setNewDays] = useState('30');
+
+  const loading = loadingRead || isPending || isConfirming;
 
   const loadInheritance = async (idToLoad) => {
     const id = idToLoad || inheritanceId;
     setError('');
     setSuccess('');
-    setLoading(true);
+    setLoadingRead(true);
 
     try {
       if (!contractAddress || !publicClient) {
@@ -46,64 +49,81 @@ export const InheritanceManager = ({ account, initialId }) => {
       setError(err.message || 'Failed to load inheritance');
       setInheritanceData(null);
     } finally {
-      setLoading(false);
+      setLoadingRead(false);
     }
   };
+
+  const [lastAction, setLastAction] = useState('');
 
   const handleClaim = async () => {
     setError('');
     setSuccess('');
-    setLoading(true);
+    setLastAction('claim');
 
     try {
-      const tx = await contract.claim(inheritanceId);
-      await tx.wait();
-      setSuccess('Successfully claimed funds!');
-      loadInheritance();
+      writeContract({
+        address: contractAddress,
+        abi: contractABI,
+        functionName: 'claim',
+        args: [BigInt(inheritanceId)],
+      });
     } catch (err) {
       console.error('Claim error:', err);
       setError(err.message || 'Failed to claim');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleReclaim = async () => {
     setError('');
     setSuccess('');
-    setLoading(true);
+    setLastAction('reclaim');
 
     try {
-      const tx = await contract.reclaim(inheritanceId);
-      await tx.wait();
-      setSuccess('Successfully reclaimed funds!');
-      loadInheritance();
+      writeContract({
+        address: contractAddress,
+        abi: contractABI,
+        functionName: 'reclaim',
+        args: [BigInt(inheritanceId)],
+      });
     } catch (err) {
       console.error('Reclaim error:', err);
       setError(err.message || 'Failed to reclaim');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleExtend = async () => {
     setError('');
     setSuccess('');
-    setLoading(true);
+    setLastAction('extend');
 
     try {
       const newDeadline = Math.floor(Date.now() / 1000) + parseInt(newDays) * 24 * 60 * 60;
-      const tx = await contract.extendDeadline(inheritanceId, newDeadline);
-      await tx.wait();
-      setSuccess('Successfully extended deadline!');
-      loadInheritance();
+      writeContract({
+        address: contractAddress,
+        abi: contractABI,
+        functionName: 'extendDeadline',
+        args: [BigInt(inheritanceId), BigInt(newDeadline)],
+      });
     } catch (err) {
       console.error('Extend error:', err);
       setError(err.message || 'Failed to extend deadline');
-    } finally {
-      setLoading(false);
     }
   };
+
+  // Handle transaction confirmation
+  useEffect(() => {
+    if (isConfirmed) {
+      if (lastAction === 'claim') {
+        setSuccess('Successfully claimed funds!');
+      } else if (lastAction === 'reclaim') {
+        setSuccess('Successfully reclaimed funds!');
+      } else if (lastAction === 'extend') {
+        setSuccess('Successfully extended deadline!');
+      }
+      loadInheritance();
+      setLastAction('');
+    }
+  }, [isConfirmed, lastAction]);
 
   const canClaim = inheritanceData &&
     !inheritanceData.claimed &&
