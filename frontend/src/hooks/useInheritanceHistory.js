@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { formatEther, decodeEventLog, parseAbiItem } from 'viem';
+import contractABI from '../utils/CryptoHeirABI.json';
 
-export const useInheritanceHistory = (contract, account) => {
+export const useInheritanceHistory = (contractAddress, publicClient, account) => {
   const [deposits, setDeposits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!contract || !account) {
+      if (!contractAddress || !publicClient || !account) {
         setDeposits([]);
         return;
       }
@@ -17,17 +18,42 @@ export const useInheritanceHistory = (contract, account) => {
       setError('');
 
       try {
-        // Query all InheritanceCreated events
-        const filter = contract.filters.InheritanceCreated();
-        const events = await contract.queryFilter(filter);
+        // Get InheritanceCreated event ABI
+        const createdEvent = contractABI.find(item => item.type === 'event' && item.name === 'InheritanceCreated');
 
-        // Filter events where user is depositor or beneficiary
-        const userEvents = events.filter(event => {
-          const depositor = event.args.depositor.toLowerCase();
-          const beneficiary = event.args.beneficiary.toLowerCase();
-          const userAddress = account.toLowerCase();
-          return depositor === userAddress || beneficiary === userAddress;
+        // Query all InheritanceCreated events
+        const logs = await publicClient.getLogs({
+          address: contractAddress,
+          event: parseAbiItem('event InheritanceCreated(uint256 indexed inheritanceId, address indexed depositor, address indexed beneficiary, uint256 amount, uint256 deadline)'),
+          fromBlock: 0n,
+          toBlock: 'latest'
         });
+
+        // Decode and filter events where user is depositor or beneficiary
+        const userEvents = logs
+          .map(log => {
+            try {
+              const decoded = decodeEventLog({
+                abi: contractABI,
+                data: log.data,
+                topics: log.topics,
+              });
+              return {
+                args: decoded.args,
+                transactionHash: log.transactionHash,
+                blockNumber: log.blockNumber
+              };
+            } catch (err) {
+              return null;
+            }
+          })
+          .filter(event => {
+            if (!event) return false;
+            const depositor = event.args.depositor.toLowerCase();
+            const beneficiary = event.args.beneficiary.toLowerCase();
+            const userAddress = account.toLowerCase();
+            return depositor === userAddress || beneficiary === userAddress;
+          });
 
         // Enrich with current status
         const enrichedDeposits = await Promise.all(
@@ -35,7 +61,13 @@ export const useInheritanceHistory = (contract, account) => {
             const id = event.args.inheritanceId;
 
             try {
-              const current = await contract.getInheritance(id);
+              const current = await publicClient.readContract({
+                address: contractAddress,
+                abi: contractABI,
+                functionName: 'getInheritance',
+                args: [id],
+              });
+
               const deadlineTimestamp = Number(event.args.deadline);
               const now = Math.floor(Date.now() / 1000);
 
@@ -57,14 +89,14 @@ export const useInheritanceHistory = (contract, account) => {
                 id: id.toString(),
                 depositor: event.args.depositor,
                 beneficiary: event.args.beneficiary,
-                amount: ethers.formatEther(event.args.amount),
+                amount: formatEther(event.args.amount),
                 deadline: deadlineTimestamp,
                 deadlineFormatted: new Date(deadlineTimestamp * 1000).toLocaleString(),
                 claimed: current[4],
                 status,
                 role: isDepositor && isBeneficiary ? 'both' : isDepositor ? 'depositor' : 'beneficiary',
                 transactionHash: event.transactionHash,
-                blockNumber: event.blockNumber
+                blockNumber: Number(event.blockNumber)
               };
             } catch (err) {
               console.error(`Error fetching inheritance ${id}:`, err);
@@ -88,7 +120,7 @@ export const useInheritanceHistory = (contract, account) => {
     };
 
     fetchHistory();
-  }, [contract, account]);
+  }, [contractAddress, publicClient, account]);
 
   return { deposits, loading, error };
 };
