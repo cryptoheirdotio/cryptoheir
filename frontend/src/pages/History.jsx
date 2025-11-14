@@ -100,7 +100,7 @@ export function History() {
       <div className="alert alert-info mb-6">
         <div>
           <strong>Network:</strong> {networkInfo?.name || 'Unknown'} |
-          <strong className="ml-2">Contract:</strong> {contract?.target ? `${contract.target.slice(0, 10)}...` : 'N/A'}
+          <strong className="ml-2">Contract:</strong> {contractAddress ? `${contractAddress.slice(0, 10)}...${contractAddress.slice(-8)}` : 'N/A'}
         </div>
       </div>
 
@@ -262,13 +262,13 @@ export function History() {
 
                         <div className="mt-2">
                           <a
-                            href={`https://sepolia.etherscan.io/tx/${deposit.transactionHash}`}
+                            href={`${networkInfo?.explorer}/tx/${deposit.transactionHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="link link-primary text-xs"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            View on Etherscan
+                            View on Explorer
                           </a>
                         </div>
                       </div>

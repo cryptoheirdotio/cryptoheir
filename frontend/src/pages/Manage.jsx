@@ -2,7 +2,7 @@ import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { InheritanceManager } from '../components/InheritanceManager';
 
 export function Manage() {
-  const { contract, account, networkInfo } = useOutletContext();
+  const { contractAddress, account, networkInfo } = useOutletContext();
   const [searchParams] = useSearchParams();
   const idFromUrl = searchParams.get('id');
 
@@ -10,7 +10,7 @@ export function Manage() {
     <>
       <div className="alert alert-info mb-6">
         <div>
-          <strong>Network:</strong> {networkInfo.name} | <strong>Contract:</strong> {contract.target.slice(0, 10)}...{contract.target.slice(-8)}
+          <strong>Network:</strong> {networkInfo.name} | <strong>Contract:</strong> {contractAddress.slice(0, 10)}...{contractAddress.slice(-8)}
         </div>
       </div>
       <InheritanceManager account={account} initialId={idFromUrl} />
