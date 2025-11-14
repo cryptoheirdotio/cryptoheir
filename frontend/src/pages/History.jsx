@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
+import { usePublicClient } from 'wagmi';
 import { useInheritanceHistory } from '../hooks/useInheritanceHistory';
 
 export function History() {
-  const { contract, account, networkInfo } = useOutletContext();
+  const { contractAddress, account, networkInfo } = useOutletContext();
+  const publicClient = usePublicClient();
   const navigate = useNavigate();
-  const { deposits, loading, error } = useInheritanceHistory(contract, account);
+  const { deposits, loading, error } = useInheritanceHistory(contractAddress, publicClient, account);
 
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
