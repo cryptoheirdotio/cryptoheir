@@ -3,13 +3,13 @@ import { DepositForm } from '../components/DepositForm';
 import { InheritanceManager } from '../components/InheritanceManager';
 
 export function Home() {
-  const { contract, account, networkInfo } = useOutletContext();
+  const { contractAddress, account, networkInfo } = useOutletContext();
 
   return (
     <>
       <div className="alert alert-info mb-6">
         <div>
-          <strong>Network:</strong> {networkInfo.name} | <strong>Contract:</strong> {contract.target.slice(0, 10)}...{contract.target.slice(-8)}
+          <strong>Network:</strong> {networkInfo.name} | <strong>Contract:</strong> {contractAddress.slice(0, 10)}...{contractAddress.slice(-8)}
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
