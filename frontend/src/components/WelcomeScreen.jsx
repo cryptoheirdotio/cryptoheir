@@ -4,30 +4,13 @@ export function WelcomeScreen() {
       <div className="hero-content text-center">
         <div className="max-w-md">
           <h1 className="text-5xl font-bold">Welcome to CryptoHeir</h1>
-          <p className="py-6 text-lg">Connect your wallet to get started.</p>
-          <div className="card bg-base-200 shadow-xl">
-            <div className="card-body">
-              <h2 className="card-title">Features</h2>
-              <ul className="menu menu-vertical text-left">
-                <li>
-                  <span className="badge badge-primary mr-2">1</span>
-                  Deposit funds for a beneficiary with a deadline
-                </li>
-                <li>
-                  <span className="badge badge-primary mr-2">2</span>
-                  Beneficiaries can claim funds after the deadline
-                </li>
-                <li>
-                  <span className="badge badge-primary mr-2">3</span>
-                  Depositors can reclaim funds before the deadline
-                </li>
-                <li>
-                  <span className="badge badge-primary mr-2">4</span>
-                  Extend deadlines anytime before expiration
-                </li>
-              </ul>
-            </div>
-          </div>
+          <p className="py-6 text-lg">
+            CryptoHeir is a secure way to transfer cryptocurrency to your loved ones or beneficiaries on a schedule you control. Set up a time-locked transfer today, and your chosen recipient can claim the funds after your specified deadline passes.
+          </p>
+          <p className="pb-6 text-lg">
+            Whether you're planning for inheritance, creating a trust fund, or scheduling a future payment, CryptoHeir makes it simple and secure. No intermediaries, no complex paperwork—just connect your wallet and get started.
+          </p>
+          <p className="text-lg font-semibold">Connect your wallet to get started.</p>
         </div>
       </div>
     </div>
