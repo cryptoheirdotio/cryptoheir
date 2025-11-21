@@ -1,24 +1,22 @@
-import { http, createConfig } from 'wagmi';
+import { http } from 'wagmi';
 import { foundry, sepolia, mainnet } from 'wagmi/chains';
-import { injected, walletConnect } from 'wagmi/connectors';
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 
 // Get WalletConnect project ID from environment
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '';
 
 if (!projectId) {
-  console.warn('VITE_WALLETCONNECT_PROJECT_ID is not set. WalletConnect will not be available.');
+  console.warn('VITE_WALLETCONNECT_PROJECT_ID is not set. Some wallet features may be limited.');
 }
 
 // Define supported chains
 export const chains = [foundry, sepolia, mainnet];
 
-// Configure wagmi
-export const config = createConfig({
+// Configure wagmi with RainbowKit's default wallets
+export const config = getDefaultConfig({
+  appName: 'CryptoHeir',
+  projectId,
   chains,
-  connectors: [
-    injected(), // MetaMask, Coinbase Wallet, etc.
-    ...(projectId ? [walletConnect({ projectId })] : []), // Only add WalletConnect if project ID is available
-  ],
   transports: {
     [foundry.id]: http('http://127.0.0.1:8545'), // Local Foundry node
     [sepolia.id]: http(), // Uses public RPC from viem
