@@ -1,14 +1,57 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, usePublicClient, useReadContract } from 'wagmi';
 import { parseEther, isAddress, decodeEventLog } from 'viem';
 import contractABI from '../utils/CryptoHeirABI.json';
+
+// Minimal ERC20 ABI for approve and allowance
+const ERC20_ABI = [
+  {
+    name: 'approve',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  },
+  {
+    name: 'allowance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' }
+    ],
+    outputs: [{ name: '', type: 'uint256' }]
+  }
+];
 
 export const DepositForm = ({ account }) => {
   const { contractAddress } = useOutletContext();
   const publicClient = usePublicClient();
-  const { writeContract, data: hash, isPending, isError: isWriteError, error: writeError } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed, data: receipt } = useWaitForTransactionReceipt({ hash });
+
+  // Separate hooks for deposit and approval
+  const {
+    writeContract: writeDeposit,
+    data: depositHash,
+    isPending: isDepositPending,
+    isError: isDepositWriteError,
+    error: depositWriteError
+  } = useWriteContract();
+
+  const {
+    writeContract: writeApproval,
+    data: approvalHash,
+    isPending: isApprovalPending,
+    isError: isApprovalWriteError,
+    error: approvalWriteError
+  } = useWriteContract();
+
+  const { isLoading: isDepositConfirming, isSuccess: isDepositConfirmed, data: depositReceipt } = useWaitForTransactionReceipt({ hash: depositHash });
+  const { isLoading: isApprovalConfirming, isSuccess: isApprovalConfirmed } = useWaitForTransactionReceipt({ hash: approvalHash });
+
   const [beneficiary, setBeneficiary] = useState('');
   const [amount, setAmount] = useState('');
   const [days, setDays] = useState('30');
@@ -16,8 +59,77 @@ export const DepositForm = ({ account }) => {
   const [tokenAddress, setTokenAddress] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [needsApproval, setNeedsApproval] = useState(false);
 
-  const loading = isPending || isConfirming;
+  const loading = isDepositPending || isDepositConfirming || isApprovalPending || isApprovalConfirming;
+
+  // Check allowance for ERC20 tokens
+  const checkAllowance = async () => {
+    if (tokenType !== 'erc20' || !tokenAddress || !isAddress(tokenAddress) || !account || !contractAddress || !amount) {
+      setNeedsApproval(false);
+      return;
+    }
+
+    try {
+      const amountWei = parseEther(amount);
+      const allowance = await publicClient.readContract({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [account, contractAddress],
+      });
+
+      setNeedsApproval(allowance < amountWei);
+    } catch (err) {
+      console.error('Error checking allowance:', err);
+      setNeedsApproval(true);
+    }
+  };
+
+  // Check allowance when relevant fields change
+  useEffect(() => {
+    if (tokenType === 'erc20' && tokenAddress && amount && account && contractAddress) {
+      checkAllowance();
+    } else {
+      setNeedsApproval(false);
+    }
+  }, [tokenType, tokenAddress, amount, account, contractAddress]);
+
+  // Re-check allowance after approval is confirmed
+  useEffect(() => {
+    if (isApprovalConfirmed) {
+      setSuccess('Approval confirmed! You can now deposit.');
+      checkAllowance();
+    }
+  }, [isApprovalConfirmed]);
+
+  const handleApprove = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    try {
+      if (!tokenAddress || !isAddress(tokenAddress)) {
+        throw new Error('Invalid token address');
+      }
+
+      if (!contractAddress) {
+        throw new Error('Contract not initialized');
+      }
+
+      const amountWei = parseEther(amount);
+
+      writeApproval({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [contractAddress, amountWei],
+      });
+    } catch (err) {
+      console.error('Approval error:', err);
+      setError(err.message || 'Failed to approve');
+    }
+  };
 
   const handleDeposit = async (e) => {
     e.preventDefault();
@@ -44,10 +156,12 @@ export const DepositForm = ({ account }) => {
           throw new Error('Invalid token address');
         }
 
-        // For ERC20 tokens, user needs to approve the contract first
-        // This will be handled in a separate transaction
-        // For now, we'll just try to deposit and let the user handle approval separately
-        writeContract({
+        if (needsApproval) {
+          throw new Error('Please approve the contract first');
+        }
+
+        // ERC20 token deposit (approval already handled)
+        writeDeposit({
           address: contractAddress,
           abi: contractABI,
           functionName: 'deposit',
@@ -55,7 +169,7 @@ export const DepositForm = ({ account }) => {
         });
       } else {
         // Native token deposit
-        writeContract({
+        writeDeposit({
           address: contractAddress,
           abi: contractABI,
           functionName: 'deposit',
@@ -71,14 +185,14 @@ export const DepositForm = ({ account }) => {
 
   // Handle transaction confirmation and event parsing
   useEffect(() => {
-    if (isConfirmed && receipt) {
+    if (isDepositConfirmed && depositReceipt) {
       // Parse InheritanceCreated event from logs
       let inheritanceId = 'unknown';
 
       try {
         const createdEvent = contractABI.find(item => item.type === 'event' && item.name === 'InheritanceCreated');
 
-        for (const log of receipt.logs) {
+        for (const log of depositReceipt.logs) {
           try {
             const decoded = decodeEventLog({
               abi: contractABI,
@@ -105,14 +219,21 @@ export const DepositForm = ({ account }) => {
       setDays('30');
       setTokenAddress('');
     }
-  }, [isConfirmed, receipt]);
+  }, [isDepositConfirmed, depositReceipt]);
 
-  // Handle write errors
+  // Handle deposit write errors
   useEffect(() => {
-    if (isWriteError && writeError) {
-      setError(writeError.message || 'Failed to deposit');
+    if (isDepositWriteError && depositWriteError) {
+      setError(depositWriteError.message || 'Failed to deposit');
     }
-  }, [isWriteError, writeError]);
+  }, [isDepositWriteError, depositWriteError]);
+
+  // Handle approval write errors
+  useEffect(() => {
+    if (isApprovalWriteError && approvalWriteError) {
+      setError(approvalWriteError.message || 'Failed to approve');
+    }
+  }, [isApprovalWriteError, approvalWriteError]);
 
   return (
     <div className="card bg-base-100 shadow-xl">
@@ -147,11 +268,6 @@ export const DepositForm = ({ account }) => {
                 required={tokenType === 'erc20'}
                 disabled={loading}
               />
-              <label className="label">
-                <span className="label-text-alt text-warning">
-                  Note: You must approve the CryptoHeir contract to spend your tokens first
-                </span>
-              </label>
             </div>
           )}
           <div className="form-control">
@@ -197,9 +313,25 @@ export const DepositForm = ({ account }) => {
               disabled={loading}
             />
           </div>
-          <button type="submit" className="btn btn-primary w-full" disabled={loading}>
-            {loading ? 'Processing...' : 'Deposit'}
-          </button>
+          {tokenType === 'erc20' && needsApproval ? (
+            <button
+              type="button"
+              onClick={handleApprove}
+              className="btn btn-warning w-full"
+              disabled={loading || !tokenAddress || !isAddress(tokenAddress) || !amount}
+            >
+              {isApprovalPending || isApprovalConfirming ? 'Approving...' : 'Approve Token'}
+            </button>
+          ) : (
+            <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+              {isDepositPending || isDepositConfirming ? 'Processing...' : 'Deposit'}
+            </button>
+          )}
+          {tokenType === 'erc20' && !needsApproval && tokenAddress && (
+            <div className="alert alert-info">
+              <span>Token approved! You can now deposit.</span>
+            </div>
+          )}
         </form>
         {error && (
           <div className="alert alert-error mt-4">
