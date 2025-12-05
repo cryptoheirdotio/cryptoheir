@@ -12,6 +12,8 @@ export const DepositForm = ({ account }) => {
   const [beneficiary, setBeneficiary] = useState('');
   const [amount, setAmount] = useState('');
   const [days, setDays] = useState('30');
+  const [tokenType, setTokenType] = useState('native'); // 'native' or 'erc20'
+  const [tokenAddress, setTokenAddress] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -32,15 +34,35 @@ export const DepositForm = ({ account }) => {
       }
 
       const deadline = Math.floor(Date.now() / 1000) + parseInt(days) * 24 * 60 * 60;
-      const value = parseEther(amount);
+      const amountWei = parseEther(amount);
 
-      writeContract({
-        address: contractAddress,
-        abi: contractABI,
-        functionName: 'deposit',
-        args: [beneficiary, BigInt(deadline)],
-        value,
-      });
+      // Determine token address (address(0) for native token)
+      const token = tokenType === 'native' ? '0x0000000000000000000000000000000000000000' : tokenAddress;
+
+      if (tokenType === 'erc20') {
+        if (!isAddress(tokenAddress)) {
+          throw new Error('Invalid token address');
+        }
+
+        // For ERC20 tokens, user needs to approve the contract first
+        // This will be handled in a separate transaction
+        // For now, we'll just try to deposit and let the user handle approval separately
+        writeContract({
+          address: contractAddress,
+          abi: contractABI,
+          functionName: 'deposit',
+          args: [token, beneficiary, amountWei, BigInt(deadline)],
+        });
+      } else {
+        // Native token deposit
+        writeContract({
+          address: contractAddress,
+          abi: contractABI,
+          functionName: 'deposit',
+          args: [token, beneficiary, amountWei, BigInt(deadline)],
+          value: amountWei,
+        });
+      }
     } catch (err) {
       console.error('Deposit error:', err);
       setError(err.message || 'Failed to deposit');
@@ -81,6 +103,7 @@ export const DepositForm = ({ account }) => {
       setBeneficiary('');
       setAmount('');
       setDays('30');
+      setTokenAddress('');
     }
   }, [isConfirmed, receipt]);
 
@@ -98,6 +121,41 @@ export const DepositForm = ({ account }) => {
         <form onSubmit={handleDeposit} className="space-y-4">
           <div className="form-control">
             <label className="label">
+              <span className="label-text">Token Type:</span>
+            </label>
+            <select
+              value={tokenType}
+              onChange={(e) => setTokenType(e.target.value)}
+              className="select select-bordered w-full"
+              disabled={loading}
+            >
+              <option value="native">Native Token (ETH/MATIC/etc)</option>
+              <option value="erc20">ERC20 Token</option>
+            </select>
+          </div>
+          {tokenType === 'erc20' && (
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Token Contract Address:</span>
+              </label>
+              <input
+                type="text"
+                value={tokenAddress}
+                onChange={(e) => setTokenAddress(e.target.value)}
+                placeholder="0x..."
+                className="input input-bordered w-full"
+                required={tokenType === 'erc20'}
+                disabled={loading}
+              />
+              <label className="label">
+                <span className="label-text-alt text-warning">
+                  Note: You must approve the CryptoHeir contract to spend your tokens first
+                </span>
+              </label>
+            </div>
+          )}
+          <div className="form-control">
+            <label className="label">
               <span className="label-text">Beneficiary Address:</span>
             </label>
             <input
@@ -112,7 +170,7 @@ export const DepositForm = ({ account }) => {
           </div>
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Amount (ETH):</span>
+              <span className="label-text">Amount:</span>
             </label>
             <input
               type="number"

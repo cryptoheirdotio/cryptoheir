@@ -36,13 +36,19 @@ export const InheritanceManager = ({ account, initialId }) => {
         args: [BigInt(id)],
       });
 
+      const tokenAddr = data[2];
+      const isNativeToken = tokenAddr === '0x0000000000000000000000000000000000000000';
+
       setInheritanceData({
         depositor: data[0],
         beneficiary: data[1],
-        amount: formatEther(data[2]),
-        deadline: new Date(Number(data[3]) * 1000).toLocaleString(),
-        deadlineTimestamp: Number(data[3]),
-        claimed: data[4],
+        token: tokenAddr,
+        isNativeToken,
+        tokenDisplay: isNativeToken ? 'Native Token' : tokenAddr,
+        amount: formatEther(data[3]),
+        deadline: new Date(Number(data[4]) * 1000).toLocaleString(),
+        deadlineTimestamp: Number(data[4]),
+        claimed: data[5],
       });
     } catch (err) {
       console.error('Load error:', err);
@@ -188,10 +194,24 @@ export const InheritanceManager = ({ account, initialId }) => {
                 <div className="stat-value text-sm break-all">{inheritanceData.beneficiary}</div>
               </div>
             </div>
+            <div className="stats shadow w-full mb-4">
+              <div className="stat">
+                <div className="stat-title">Token</div>
+                <div className="stat-value text-sm break-all">
+                  {inheritanceData.isNativeToken ? (
+                    <span className="badge badge-primary badge-lg">Native Token</span>
+                  ) : (
+                    <span className="text-xs">{inheritanceData.token}</span>
+                  )}
+                </div>
+              </div>
+            </div>
             <div className="stats stats-vertical lg:stats-horizontal shadow w-full mb-4">
               <div className="stat">
                 <div className="stat-title">Amount</div>
-                <div className="stat-value text-2xl">{inheritanceData.amount} ETH</div>
+                <div className="stat-value text-2xl">
+                  {inheritanceData.amount} {inheritanceData.isNativeToken ? 'tokens' : 'tokens'}
+                </div>
               </div>
               <div className="stat">
                 <div className="stat-title">Status</div>
