@@ -18,6 +18,7 @@ contract CryptoHeirTest is Test {
         uint256 indexed inheritanceId,
         address indexed depositor,
         address indexed beneficiary,
+        address token,
         uint256 amount,
         uint256 deadline
     );
@@ -25,12 +26,14 @@ contract CryptoHeirTest is Test {
     event InheritanceClaimed(
         uint256 indexed inheritanceId,
         address indexed beneficiary,
+        address token,
         uint256 amount
     );
 
     event InheritanceReclaimed(
         uint256 indexed inheritanceId,
         address indexed depositor,
+        address token,
         uint256 amount
     );
 
@@ -54,15 +57,16 @@ contract CryptoHeirTest is Test {
         vm.startPrank(depositor);
 
         vm.expectEmit(true, true, true, true);
-        emit InheritanceCreated(0, depositor, beneficiary, DEPOSIT_AMOUNT, deadline);
+        emit InheritanceCreated(0, depositor, beneficiary, address(0), DEPOSIT_AMOUNT, deadline);
 
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         assertEq(inheritanceId, 0);
 
         (
             address _depositor,
             address _beneficiary,
+            address _token,
             uint256 _amount,
             uint256 _deadline,
             bool _claimed
@@ -70,6 +74,7 @@ contract CryptoHeirTest is Test {
 
         assertEq(_depositor, depositor);
         assertEq(_beneficiary, beneficiary);
+        assertEq(_token, address(0));
         assertEq(_amount, DEPOSIT_AMOUNT);
         assertEq(_deadline, deadline);
         assertFalse(_claimed);
@@ -81,7 +86,7 @@ contract CryptoHeirTest is Test {
         vm.startPrank(depositor);
 
         vm.expectRevert(CryptoHeir.InvalidBeneficiary.selector);
-        cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), deadline);
+        cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), address(0), DEPOSIT_AMOUNT, deadline);
 
         vm.stopPrank();
     }
@@ -90,7 +95,7 @@ contract CryptoHeirTest is Test {
         vm.startPrank(depositor);
 
         vm.expectRevert(CryptoHeir.InvalidBeneficiary.selector);
-        cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(depositor, deadline);
+        cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), depositor, DEPOSIT_AMOUNT, deadline);
 
         vm.stopPrank();
     }
@@ -100,7 +105,7 @@ contract CryptoHeirTest is Test {
 
         uint256 pastDeadline = block.timestamp - 1;
         vm.expectRevert(CryptoHeir.InvalidDeadline.selector);
-        cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, pastDeadline);
+        cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, pastDeadline);
 
         vm.stopPrank();
     }
@@ -109,7 +114,7 @@ contract CryptoHeirTest is Test {
         vm.startPrank(depositor);
 
         vm.expectRevert(CryptoHeir.InsufficientAmount.selector);
-        cryptoHeir.deposit{value: 0}(beneficiary, deadline);
+        cryptoHeir.deposit{value: 0}(address(0), beneficiary, 0, deadline);
 
         vm.stopPrank();
     }
@@ -117,7 +122,7 @@ contract CryptoHeirTest is Test {
     function testClaimAfterDeadline() public {
         // Create inheritance
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         // Warp time to after deadline
         vm.warp(deadline + 1);
@@ -127,7 +132,7 @@ contract CryptoHeirTest is Test {
         vm.startPrank(beneficiary);
 
         vm.expectEmit(true, true, false, true);
-        emit InheritanceClaimed(inheritanceId, beneficiary, DEPOSIT_AMOUNT);
+        emit InheritanceClaimed(inheritanceId, beneficiary, address(0), DEPOSIT_AMOUNT);
 
         cryptoHeir.claim(inheritanceId);
 
@@ -136,13 +141,13 @@ contract CryptoHeirTest is Test {
         uint256 beneficiaryBalanceAfter = beneficiary.balance;
         assertEq(beneficiaryBalanceAfter - beneficiaryBalanceBefore, DEPOSIT_AMOUNT);
 
-        (, , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
+        (, , , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
         assertTrue(claimed);
     }
 
     function testClaimRevertsBeforeDeadline() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         vm.startPrank(beneficiary);
 
@@ -154,7 +159,7 @@ contract CryptoHeirTest is Test {
 
     function testClaimRevertsOnNonBeneficiary() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         vm.warp(deadline + 1);
 
@@ -168,7 +173,7 @@ contract CryptoHeirTest is Test {
 
     function testClaimRevertsOnAlreadyClaimed() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         vm.warp(deadline + 1);
 
@@ -183,14 +188,14 @@ contract CryptoHeirTest is Test {
 
     function testReclaimBeforeDeadline() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         uint256 depositorBalanceBefore = depositor.balance;
 
         vm.startPrank(depositor);
 
         vm.expectEmit(true, true, false, true);
-        emit InheritanceReclaimed(inheritanceId, depositor, DEPOSIT_AMOUNT);
+        emit InheritanceReclaimed(inheritanceId, depositor, address(0), DEPOSIT_AMOUNT);
 
         cryptoHeir.reclaim(inheritanceId);
 
@@ -199,13 +204,13 @@ contract CryptoHeirTest is Test {
         uint256 depositorBalanceAfter = depositor.balance;
         assertEq(depositorBalanceAfter - depositorBalanceBefore, DEPOSIT_AMOUNT);
 
-        (, , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
+        (, , , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
         assertTrue(claimed);
     }
 
     function testReclaimRevertsAfterDeadline() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         vm.warp(deadline + 1);
 
@@ -219,7 +224,7 @@ contract CryptoHeirTest is Test {
 
     function testReclaimRevertsOnNonDepositor() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         vm.startPrank(other);
 
@@ -231,7 +236,7 @@ contract CryptoHeirTest is Test {
 
     function testReclaimRevertsOnAlreadyClaimed() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         vm.startPrank(depositor);
         cryptoHeir.reclaim(inheritanceId);
@@ -244,7 +249,7 @@ contract CryptoHeirTest is Test {
 
     function testExtendDeadline() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         uint256 newDeadline = deadline + 30 days;
 
@@ -257,13 +262,13 @@ contract CryptoHeirTest is Test {
 
         vm.stopPrank();
 
-        (, , , uint256 _deadline, ) = cryptoHeir.getInheritance(inheritanceId);
+        (, , , , uint256 _deadline, ) = cryptoHeir.getInheritance(inheritanceId);
         assertEq(_deadline, newDeadline);
     }
 
     function testExtendDeadlineRevertsOnPastDeadline() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         uint256 pastDeadline = block.timestamp - 1;
 
@@ -277,7 +282,7 @@ contract CryptoHeirTest is Test {
 
     function testExtendDeadlineRevertsOnNonDepositor() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         uint256 newDeadline = deadline + 30 days;
 
@@ -291,7 +296,7 @@ contract CryptoHeirTest is Test {
 
     function testExtendDeadlineRevertsOnAlreadyClaimed() public {
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         vm.warp(deadline + 1);
 
@@ -311,8 +316,8 @@ contract CryptoHeirTest is Test {
     function testMultipleDeposits() public {
         vm.startPrank(depositor);
 
-        uint256 id1 = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(beneficiary, deadline);
-        uint256 id2 = cryptoHeir.deposit{value: DEPOSIT_AMOUNT * 2}(other, deadline + 10 days);
+        uint256 id1 = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
+        uint256 id2 = cryptoHeir.deposit{value: DEPOSIT_AMOUNT * 2}(address(0), other, DEPOSIT_AMOUNT * 2, deadline + 10 days);
 
         assertEq(id1, 0);
         assertEq(id2, 1);
@@ -339,11 +344,12 @@ contract CryptoHeirTest is Test {
 
         vm.deal(depositor, amount + 1 ether);
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(fuzzBeneficiary, fuzzDeadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), fuzzBeneficiary, amount, fuzzDeadline);
 
         (
             address _depositor,
             address _beneficiary,
+            address _token,
             uint256 _amount,
             uint256 _deadline,
             bool _claimed
@@ -351,6 +357,7 @@ contract CryptoHeirTest is Test {
 
         assertEq(_depositor, depositor);
         assertEq(_beneficiary, fuzzBeneficiary);
+        assertEq(_token, address(0));
         assertEq(_amount, amount);
         assertEq(_deadline, fuzzDeadline);
         assertFalse(_claimed);
@@ -365,7 +372,7 @@ contract CryptoHeirTest is Test {
         vm.deal(depositor, amount + 1 ether);
         vm.prank(depositor);
         vm.expectRevert(CryptoHeir.InvalidDeadline.selector);
-        cryptoHeir.deposit{value: amount}(beneficiary, invalidDeadline);
+        cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, invalidDeadline);
     }
 
     function testFuzz_ClaimAfterDeadline(uint96 amount, uint32 waitTime) public {
@@ -377,7 +384,7 @@ contract CryptoHeirTest is Test {
 
         vm.deal(depositor, amount + 1 ether);
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, fuzzDeadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, fuzzDeadline);
 
         // Warp to after deadline
         vm.warp(fuzzDeadline + waitTime);
@@ -387,7 +394,7 @@ contract CryptoHeirTest is Test {
         cryptoHeir.claim(inheritanceId);
 
         assertEq(beneficiary.balance - balanceBefore, amount);
-        (, , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
+        (, , , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
         assertTrue(claimed);
         assertEq(address(cryptoHeir).balance, 0);
     }
@@ -400,7 +407,7 @@ contract CryptoHeirTest is Test {
 
         vm.deal(depositor, amount + 1 ether);
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, fuzzDeadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, fuzzDeadline);
 
         // Warp to before deadline
         vm.warp(fuzzDeadline - timeBeforeDeadline);
@@ -418,7 +425,7 @@ contract CryptoHeirTest is Test {
 
         vm.deal(depositor, amount + 1 ether);
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, fuzzDeadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, fuzzDeadline);
 
         // Warp to before deadline
         uint256 reclaimTime = fuzzDeadline - timeBeforeDeadline;
@@ -429,7 +436,7 @@ contract CryptoHeirTest is Test {
         cryptoHeir.reclaim(inheritanceId);
 
         assertEq(depositor.balance - balanceBefore, amount);
-        (, , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
+        (, , , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
         assertTrue(claimed);
         assertEq(address(cryptoHeir).balance, 0);
     }
@@ -442,7 +449,7 @@ contract CryptoHeirTest is Test {
 
         vm.deal(depositor, amount + 1 ether);
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, fuzzDeadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, fuzzDeadline);
 
         // Warp to after deadline
         vm.warp(fuzzDeadline + timeAfterDeadline);
@@ -460,14 +467,14 @@ contract CryptoHeirTest is Test {
 
         vm.deal(depositor, amount + 1 ether);
         vm.prank(depositor);
-        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(beneficiary, initialDeadline);
+        uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, initialDeadline);
 
         uint256 newDeadline = block.timestamp + 30 days + extension;
 
         vm.prank(depositor);
         cryptoHeir.extendDeadline(inheritanceId, newDeadline);
 
-        (, , , uint256 _deadline, ) = cryptoHeir.getInheritance(inheritanceId);
+        (, , , , uint256 _deadline, ) = cryptoHeir.getInheritance(inheritanceId);
         assertEq(_deadline, newDeadline);
     }
 
@@ -479,7 +486,9 @@ contract CryptoHeirTest is Test {
         for (uint256 i = 0; i < count; i++) {
             vm.prank(depositor);
             uint256 id = cryptoHeir.deposit{value: 1 ether}(
+                address(0),
                 beneficiary,
+                1 ether,
                 block.timestamp + 30 days + (i * 1 days)
             );
             assertEq(id, i);
@@ -501,7 +510,7 @@ contract CryptoHeirTest is Test {
         for (uint256 i = 0; i < depositCount; i++) {
             uint256 amount = baseAmount + (i * 0.1 ether);
             vm.prank(depositor);
-            cryptoHeir.deposit{value: amount}(beneficiary, block.timestamp + 30 days);
+            cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, block.timestamp + 30 days);
             totalDeposited += amount;
         }
 

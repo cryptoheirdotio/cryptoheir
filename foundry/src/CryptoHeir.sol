@@ -2,16 +2,21 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title CryptoHeir
  * @notice A time-locked fund transfer contract allowing deposits with deadlines
- * @dev Supports deposit, claim, reclaim, and deadline extension
+ * @dev Supports deposit, claim, reclaim, and deadline extension for both native and ERC20 tokens
  */
 contract CryptoHeir is ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     struct Inheritance {
         address depositor;
         address beneficiary;
+        address token; // address(0) for native token, ERC20 address otherwise
         uint256 amount;
         uint256 deadline;
         bool claimed;
@@ -28,6 +33,7 @@ contract CryptoHeir is ReentrancyGuard {
         uint256 indexed inheritanceId,
         address indexed depositor,
         address indexed beneficiary,
+        address token,
         uint256 amount,
         uint256 deadline
     );
@@ -35,12 +41,14 @@ contract CryptoHeir is ReentrancyGuard {
     event InheritanceClaimed(
         uint256 indexed inheritanceId,
         address indexed beneficiary,
+        address token,
         uint256 amount
     );
 
     event InheritanceReclaimed(
         uint256 indexed inheritanceId,
         address indexed depositor,
+        address token,
         uint256 amount
     );
 
@@ -54,6 +62,7 @@ contract CryptoHeir is ReentrancyGuard {
     error InvalidBeneficiary();
     error InvalidDeadline();
     error InsufficientAmount();
+    error InvalidTokenTransfer();
     error InheritanceNotFound();
     error AlreadyClaimed();
     error DeadlineNotReached();
@@ -63,27 +72,49 @@ contract CryptoHeir is ReentrancyGuard {
 
     /**
      * @notice Deposit funds for a beneficiary with a deadline
+     * @param _token Token address (address(0) for native token)
      * @param _beneficiary Address that can claim the funds after deadline
+     * @param _amount Amount to deposit (for ERC20 tokens, ignored for native token)
      * @param _deadline Timestamp when funds become claimable
      * @return inheritanceId The unique ID of the created inheritance
      */
-    function deposit(address _beneficiary, uint256 _deadline) external payable returns (uint256) {
+    function deposit(address _token, address _beneficiary, uint256 _amount, uint256 _deadline)
+        external
+        payable
+        returns (uint256)
+    {
         if (_beneficiary == address(0)) revert InvalidBeneficiary();
         if (_beneficiary == msg.sender) revert InvalidBeneficiary();
         if (_deadline <= block.timestamp) revert InvalidDeadline();
-        if (msg.value == 0) revert InsufficientAmount();
+
+        uint256 amount;
+
+        if (_token == address(0)) {
+            // Native token deposit
+            if (msg.value == 0) revert InsufficientAmount();
+            amount = msg.value;
+        } else {
+            // ERC20 token deposit
+            if (_amount == 0) revert InsufficientAmount();
+            if (msg.value != 0) revert InvalidTokenTransfer();
+            amount = _amount;
+
+            // Transfer tokens from sender to this contract
+            IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
+        }
 
         uint256 inheritanceId = nextInheritanceId++;
 
         inheritances[inheritanceId] = Inheritance({
             depositor: msg.sender,
             beneficiary: _beneficiary,
-            amount: msg.value,
+            token: _token,
+            amount: amount,
             deadline: _deadline,
             claimed: false
         });
 
-        emit InheritanceCreated(inheritanceId, msg.sender, _beneficiary, msg.value, _deadline);
+        emit InheritanceCreated(inheritanceId, msg.sender, _beneficiary, _token, amount, _deadline);
 
         return inheritanceId;
     }
@@ -101,12 +132,19 @@ contract CryptoHeir is ReentrancyGuard {
         if (block.timestamp < inheritance.deadline) revert DeadlineNotReached();
 
         inheritance.claimed = true;
+        address token = inheritance.token;
         uint256 amount = inheritance.amount;
 
-        emit InheritanceClaimed(_inheritanceId, msg.sender, amount);
+        emit InheritanceClaimed(_inheritanceId, msg.sender, token, amount);
 
-        (bool success, ) = msg.sender.call{value: amount}("");
-        require(success, "Transfer failed");
+        if (token == address(0)) {
+            // Transfer native token
+            (bool success, ) = msg.sender.call{value: amount}("");
+            require(success, "Transfer failed");
+        } else {
+            // Transfer ERC20 token
+            IERC20(token).safeTransfer(msg.sender, amount);
+        }
     }
 
     /**
@@ -122,12 +160,19 @@ contract CryptoHeir is ReentrancyGuard {
         if (block.timestamp >= inheritance.deadline) revert DeadlineAlreadyPassed();
 
         inheritance.claimed = true;
+        address token = inheritance.token;
         uint256 amount = inheritance.amount;
 
-        emit InheritanceReclaimed(_inheritanceId, msg.sender, amount);
+        emit InheritanceReclaimed(_inheritanceId, msg.sender, token, amount);
 
-        (bool success, ) = msg.sender.call{value: amount}("");
-        require(success, "Transfer failed");
+        if (token == address(0)) {
+            // Transfer native token
+            (bool success, ) = msg.sender.call{value: amount}("");
+            require(success, "Transfer failed");
+        } else {
+            // Transfer ERC20 token
+            IERC20(token).safeTransfer(msg.sender, amount);
+        }
     }
 
     /**
@@ -154,6 +199,7 @@ contract CryptoHeir is ReentrancyGuard {
      * @param _inheritanceId The ID of the inheritance
      * @return depositor The address of the depositor
      * @return beneficiary The address of the beneficiary
+     * @return token The token address (address(0) for native token)
      * @return amount The amount deposited
      * @return deadline The deadline timestamp
      * @return claimed Whether the inheritance has been claimed
@@ -164,6 +210,7 @@ contract CryptoHeir is ReentrancyGuard {
         returns (
             address depositor,
             address beneficiary,
+            address token,
             uint256 amount,
             uint256 deadline,
             bool claimed
@@ -173,6 +220,7 @@ contract CryptoHeir is ReentrancyGuard {
         return (
             inheritance.depositor,
             inheritance.beneficiary,
+            inheritance.token,
             inheritance.amount,
             inheritance.deadline,
             inheritance.claimed

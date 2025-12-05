@@ -29,7 +29,7 @@ contract CryptoHeirInvariantTest is Test {
         uint256 totalInheritances = cryptoHeir.nextInheritanceId();
 
         for (uint256 i = 0; i < totalInheritances; i++) {
-            (, , uint256 amount, , bool claimed) = cryptoHeir.getInheritance(i);
+            (, , , uint256 amount, , bool claimed) = cryptoHeir.getInheritance(i);
             if (!claimed) {
                 expectedBalance += amount;
             }
@@ -59,7 +59,7 @@ contract CryptoHeirInvariantTest is Test {
     function invariant_ClaimedStaysTrue() public view {
         for (uint256 i = 0; i < handler.claimedInheritancesCount(); i++) {
             uint256 id = handler.claimedInheritances(i);
-            (, , , , bool claimed) = cryptoHeir.getInheritance(id);
+            (, , , , , bool claimed) = cryptoHeir.getInheritance(id);
             assertTrue(claimed, "Once claimed, an inheritance must stay claimed");
         }
     }
@@ -150,7 +150,7 @@ contract InvariantTestHandler is Test {
         uint256 deadline = block.timestamp + (uint256(daysUntilDeadline) * 1 days);
 
         vm.prank(depositor);
-        try cryptoHeir.deposit{value: amount}(beneficiary, deadline) returns (uint256) {
+        try cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, deadline) returns (uint256) {
             totalDeposited += amount;
             lastSeenInheritanceId = cryptoHeir.nextInheritanceId();
         } catch {
@@ -175,6 +175,7 @@ contract InvariantTestHandler is Test {
         try cryptoHeir.getInheritance(inheritanceId) returns (
             address,
             address beneficiary,
+            address,
             uint256 amount,
             uint256 deadline,
             bool claimed
@@ -212,6 +213,7 @@ contract InvariantTestHandler is Test {
         try cryptoHeir.getInheritance(inheritanceId) returns (
             address depositor,
             address,
+            address,
             uint256 amount,
             uint256 deadline,
             bool claimed
@@ -245,6 +247,7 @@ contract InvariantTestHandler is Test {
         // Try to get inheritance details
         try cryptoHeir.getInheritance(inheritanceId) returns (
             address depositor,
+            address,
             address,
             uint256,
             uint256,
