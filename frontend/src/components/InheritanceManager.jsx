@@ -157,11 +157,12 @@ export const InheritanceManager = ({ account, initialId }) => {
       <div className="card-body">
         <h2 className="card-title text-2xl">Manage Inheritance</h2>
         <div className="form-control">
-          <label className="label">
+          <label className="label" htmlFor="inheritanceId">
             <span className="label-text">Inheritance ID:</span>
           </label>
           <div className="join">
             <input
+              id="inheritanceId"
               type="number"
               value={inheritanceId}
               onChange={(e) => setInheritanceId(e.target.value)}
@@ -244,11 +245,12 @@ export const InheritanceManager = ({ account, initialId }) => {
                 <div className="w-full">
                   <div className="divider">Extend Deadline</div>
                   <div className="form-control mt-2">
-                    <label className="label">
+                    <label className="label" htmlFor="newDays">
                       <span className="label-text">Extend by (days):</span>
                     </label>
                     <div className="join">
                       <input
+                        id="newDays"
                         type="number"
                         value={newDays}
                         onChange={(e) => setNewDays(e.target.value)}

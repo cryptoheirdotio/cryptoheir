@@ -241,10 +241,11 @@ export const DepositForm = ({ account }) => {
         <h2 className="card-title text-2xl">Create Inheritance</h2>
         <form onSubmit={handleDeposit} className="space-y-4">
           <div className="form-control">
-            <label className="label">
+            <label className="label" htmlFor="tokenType">
               <span className="label-text">Token Type:</span>
             </label>
             <select
+              id="tokenType"
               value={tokenType}
               onChange={(e) => setTokenType(e.target.value)}
               className="select select-bordered w-full"
@@ -256,10 +257,11 @@ export const DepositForm = ({ account }) => {
           </div>
           {tokenType === 'erc20' && (
             <div className="form-control">
-              <label className="label">
+              <label className="label" htmlFor="tokenAddress">
                 <span className="label-text">Token Contract Address:</span>
               </label>
               <input
+                id="tokenAddress"
                 type="text"
                 value={tokenAddress}
                 onChange={(e) => setTokenAddress(e.target.value)}
@@ -271,10 +273,11 @@ export const DepositForm = ({ account }) => {
             </div>
           )}
           <div className="form-control">
-            <label className="label">
+            <label className="label" htmlFor="beneficiary">
               <span className="label-text">Beneficiary Address:</span>
             </label>
             <input
+              id="beneficiary"
               type="text"
               value={beneficiary}
               onChange={(e) => setBeneficiary(e.target.value)}
@@ -285,10 +288,11 @@ export const DepositForm = ({ account }) => {
             />
           </div>
           <div className="form-control">
-            <label className="label">
+            <label className="label" htmlFor="amount">
               <span className="label-text">Amount:</span>
             </label>
             <input
+              id="amount"
               type="number"
               step="0.001"
               value={amount}
@@ -300,10 +304,11 @@ export const DepositForm = ({ account }) => {
             />
           </div>
           <div className="form-control">
-            <label className="label">
+            <label className="label" htmlFor="days">
               <span className="label-text">Lock Period (days):</span>
             </label>
             <input
+              id="days"
               type="number"
               value={days}
               onChange={(e) => setDays(e.target.value)}
