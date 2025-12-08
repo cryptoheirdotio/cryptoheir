@@ -13,6 +13,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract CryptoHeir is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
+    // Contract deployer who receives fees
+    address public immutable deployer;
+
     struct Inheritance {
         address depositor;
         address beneficiary;
@@ -58,6 +61,13 @@ contract CryptoHeir is ReentrancyGuard {
         uint256 newDeadline
     );
 
+    event FeeCollected(
+        address indexed collector,
+        address token,
+        uint256 amount,
+        string feeType
+    );
+
     // Errors
     error InvalidBeneficiary();
     error InvalidDeadline();
@@ -69,6 +79,13 @@ contract CryptoHeir is ReentrancyGuard {
     error DeadlineAlreadyPassed();
     error OnlyDepositor();
     error OnlyBeneficiary();
+
+    /**
+     * @notice Constructor sets the deployer address for fee collection
+     */
+    constructor() {
+        deployer = msg.sender;
+    }
 
     /**
      * @notice Deposit funds for a beneficiary with a deadline
@@ -88,20 +105,39 @@ contract CryptoHeir is ReentrancyGuard {
         if (_deadline <= block.timestamp) revert InvalidDeadline();
 
         uint256 amount;
+        uint256 depositFee;
+        uint256 netAmount;
 
         if (_token == address(0)) {
             // Native token deposit
             if (msg.value == 0) revert InsufficientAmount();
             amount = msg.value;
+
+            // Calculate 0.1% fee
+            depositFee = amount / 1000;
+            netAmount = amount - depositFee;
+
+            // Transfer fee to deployer
+            (bool success, ) = deployer.call{value: depositFee}("");
+            require(success, "Fee transfer failed");
         } else {
             // ERC20 token deposit
             if (_amount == 0) revert InsufficientAmount();
             if (msg.value != 0) revert InvalidTokenTransfer();
             amount = _amount;
 
+            // Calculate 0.1% fee
+            depositFee = amount / 1000;
+            netAmount = amount - depositFee;
+
             // Transfer tokens from sender to this contract
             IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
+
+            // Transfer fee to deployer
+            IERC20(_token).safeTransfer(deployer, depositFee);
         }
+
+        emit FeeCollected(deployer, _token, depositFee, "deposit");
 
         uint256 inheritanceId = nextInheritanceId++;
 
@@ -109,12 +145,12 @@ contract CryptoHeir is ReentrancyGuard {
             depositor: msg.sender,
             beneficiary: _beneficiary,
             token: _token,
-            amount: amount,
+            amount: netAmount,
             deadline: _deadline,
             claimed: false
         });
 
-        emit InheritanceCreated(inheritanceId, msg.sender, _beneficiary, _token, amount, _deadline);
+        emit InheritanceCreated(inheritanceId, msg.sender, _beneficiary, _token, netAmount, _deadline);
 
         return inheritanceId;
     }
@@ -135,15 +171,27 @@ contract CryptoHeir is ReentrancyGuard {
         address token = inheritance.token;
         uint256 amount = inheritance.amount;
 
-        emit InheritanceClaimed(_inheritanceId, msg.sender, token, amount);
+        // Calculate 1% claim fee
+        uint256 claimFee = amount / 100;
+        uint256 netAmount = amount - claimFee;
+
+        emit InheritanceClaimed(_inheritanceId, msg.sender, token, netAmount);
+        emit FeeCollected(deployer, token, claimFee, "claim");
 
         if (token == address(0)) {
-            // Transfer native token
-            (bool success, ) = msg.sender.call{value: amount}("");
+            // Transfer fee to deployer
+            (bool feeSuccess, ) = deployer.call{value: claimFee}("");
+            require(feeSuccess, "Fee transfer failed");
+
+            // Transfer remaining to beneficiary
+            (bool success, ) = msg.sender.call{value: netAmount}("");
             require(success, "Transfer failed");
         } else {
-            // Transfer ERC20 token
-            IERC20(token).safeTransfer(msg.sender, amount);
+            // Transfer fee to deployer
+            IERC20(token).safeTransfer(deployer, claimFee);
+
+            // Transfer remaining to beneficiary
+            IERC20(token).safeTransfer(msg.sender, netAmount);
         }
     }
 
