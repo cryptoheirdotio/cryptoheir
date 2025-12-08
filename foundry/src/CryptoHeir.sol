@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title CryptoHeir
@@ -14,7 +14,7 @@ contract CryptoHeir is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // Contract deployer who receives fees
-    address public immutable deployer;
+    address public immutable DEPLOYER;
 
     struct Inheritance {
         address depositor;
@@ -84,7 +84,7 @@ contract CryptoHeir is ReentrancyGuard {
      * @notice Constructor sets the deployer address for fee collection
      */
     constructor() {
-        deployer = msg.sender;
+        DEPLOYER = msg.sender;
     }
 
     /**
@@ -118,7 +118,7 @@ contract CryptoHeir is ReentrancyGuard {
             netAmount = amount - depositFee;
 
             // Transfer fee to deployer
-            (bool success, ) = deployer.call{value: depositFee}("");
+            (bool success, ) = DEPLOYER.call{value: depositFee}("");
             require(success, "Fee transfer failed");
         } else {
             // ERC20 token deposit
@@ -134,10 +134,10 @@ contract CryptoHeir is ReentrancyGuard {
             IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
 
             // Transfer fee to deployer
-            IERC20(_token).safeTransfer(deployer, depositFee);
+            IERC20(_token).safeTransfer(DEPLOYER, depositFee);
         }
 
-        emit FeeCollected(deployer, _token, depositFee, "deposit");
+        emit FeeCollected(DEPLOYER, _token, depositFee, "deposit");
 
         uint256 inheritanceId = nextInheritanceId++;
 
@@ -176,11 +176,11 @@ contract CryptoHeir is ReentrancyGuard {
         uint256 netAmount = amount - claimFee;
 
         emit InheritanceClaimed(_inheritanceId, msg.sender, token, netAmount);
-        emit FeeCollected(deployer, token, claimFee, "claim");
+        emit FeeCollected(DEPLOYER, token, claimFee, "claim");
 
         if (token == address(0)) {
             // Transfer fee to deployer
-            (bool feeSuccess, ) = deployer.call{value: claimFee}("");
+            (bool feeSuccess, ) = DEPLOYER.call{value: claimFee}("");
             require(feeSuccess, "Fee transfer failed");
 
             // Transfer remaining to beneficiary
@@ -188,7 +188,7 @@ contract CryptoHeir is ReentrancyGuard {
             require(success, "Transfer failed");
         } else {
             // Transfer fee to deployer
-            IERC20(token).safeTransfer(deployer, claimFee);
+            IERC20(token).safeTransfer(DEPLOYER, claimFee);
 
             // Transfer remaining to beneficiary
             IERC20(token).safeTransfer(msg.sender, netAmount);
