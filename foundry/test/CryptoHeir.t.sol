@@ -14,6 +14,9 @@ contract CryptoHeirTest is Test {
     uint256 public constant DEPOSIT_AMOUNT = 1 ether;
     uint256 public deadline;
 
+    // Add receive function to accept fee transfers
+    receive() external payable {}
+
     event InheritanceCreated(
         uint256 indexed inheritanceId,
         address indexed depositor,
@@ -56,8 +59,11 @@ contract CryptoHeirTest is Test {
     function testDeposit() public {
         vm.startPrank(depositor);
 
+        // After 0.1% deposit fee, net amount is 99.9% of deposit
+        uint256 netAmount = DEPOSIT_AMOUNT - (DEPOSIT_AMOUNT / 1000);
+
         vm.expectEmit(true, true, true, true);
-        emit InheritanceCreated(0, depositor, beneficiary, address(0), DEPOSIT_AMOUNT, deadline);
+        emit InheritanceCreated(0, depositor, beneficiary, address(0), netAmount, deadline);
 
         uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
@@ -75,7 +81,7 @@ contract CryptoHeirTest is Test {
         assertEq(_depositor, depositor);
         assertEq(_beneficiary, beneficiary);
         assertEq(_token, address(0));
-        assertEq(_amount, DEPOSIT_AMOUNT);
+        assertEq(_amount, netAmount);
         assertEq(_deadline, deadline);
         assertFalse(_claimed);
 
@@ -129,17 +135,21 @@ contract CryptoHeirTest is Test {
 
         uint256 beneficiaryBalanceBefore = beneficiary.balance;
 
+        // Calculate expected amounts
+        uint256 netAmountAfterDeposit = DEPOSIT_AMOUNT - (DEPOSIT_AMOUNT / 1000); // 99.9%
+        uint256 claimAmount = netAmountAfterDeposit - (netAmountAfterDeposit / 100); // 99% of stored
+
         vm.startPrank(beneficiary);
 
         vm.expectEmit(true, true, false, true);
-        emit InheritanceClaimed(inheritanceId, beneficiary, address(0), DEPOSIT_AMOUNT);
+        emit InheritanceClaimed(inheritanceId, beneficiary, address(0), claimAmount);
 
         cryptoHeir.claim(inheritanceId);
 
         vm.stopPrank();
 
         uint256 beneficiaryBalanceAfter = beneficiary.balance;
-        assertEq(beneficiaryBalanceAfter - beneficiaryBalanceBefore, DEPOSIT_AMOUNT);
+        assertEq(beneficiaryBalanceAfter - beneficiaryBalanceBefore, claimAmount);
 
         (, , , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
         assertTrue(claimed);
@@ -192,17 +202,20 @@ contract CryptoHeirTest is Test {
 
         uint256 depositorBalanceBefore = depositor.balance;
 
+        // Calculate expected reclaim amount (stored amount after deposit fee, no additional fee on reclaim)
+        uint256 reclaimAmount = DEPOSIT_AMOUNT - (DEPOSIT_AMOUNT / 1000); // 99.9%
+
         vm.startPrank(depositor);
 
         vm.expectEmit(true, true, false, true);
-        emit InheritanceReclaimed(inheritanceId, depositor, address(0), DEPOSIT_AMOUNT);
+        emit InheritanceReclaimed(inheritanceId, depositor, address(0), reclaimAmount);
 
         cryptoHeir.reclaim(inheritanceId);
 
         vm.stopPrank();
 
         uint256 depositorBalanceAfter = depositor.balance;
-        assertEq(depositorBalanceAfter - depositorBalanceBefore, DEPOSIT_AMOUNT);
+        assertEq(depositorBalanceAfter - depositorBalanceBefore, reclaimAmount);
 
         (, , , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
         assertTrue(claimed);
@@ -346,6 +359,9 @@ contract CryptoHeirTest is Test {
         vm.prank(depositor);
         uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), fuzzBeneficiary, amount, fuzzDeadline);
 
+        // Calculate expected net amount after 0.1% deposit fee
+        uint256 netAmount = amount - (amount / 1000);
+
         (
             address _depositor,
             address _beneficiary,
@@ -358,10 +374,10 @@ contract CryptoHeirTest is Test {
         assertEq(_depositor, depositor);
         assertEq(_beneficiary, fuzzBeneficiary);
         assertEq(_token, address(0));
-        assertEq(_amount, amount);
+        assertEq(_amount, netAmount);
         assertEq(_deadline, fuzzDeadline);
         assertFalse(_claimed);
-        assertEq(address(cryptoHeir).balance, amount);
+        assertEq(address(cryptoHeir).balance, netAmount);
     }
 
     function testFuzz_DepositRejectsInvalidDeadlines(uint256 amount, uint256 invalidDeadline) public {
@@ -386,6 +402,10 @@ contract CryptoHeirTest is Test {
         vm.prank(depositor);
         uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, fuzzDeadline);
 
+        // Calculate expected amounts
+        uint256 netAmountAfterDeposit = amount - (amount / 1000); // 99.9% after deposit fee
+        uint256 claimAmount = netAmountAfterDeposit - (netAmountAfterDeposit / 100); // 99% of stored
+
         // Warp to after deadline
         vm.warp(fuzzDeadline + waitTime);
 
@@ -393,7 +413,7 @@ contract CryptoHeirTest is Test {
         vm.prank(beneficiary);
         cryptoHeir.claim(inheritanceId);
 
-        assertEq(beneficiary.balance - balanceBefore, amount);
+        assertEq(beneficiary.balance - balanceBefore, claimAmount);
         (, , , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
         assertTrue(claimed);
         assertEq(address(cryptoHeir).balance, 0);
@@ -427,6 +447,9 @@ contract CryptoHeirTest is Test {
         vm.prank(depositor);
         uint256 inheritanceId = cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, fuzzDeadline);
 
+        // Calculate expected reclaim amount (stored amount after deposit fee, no additional fee)
+        uint256 reclaimAmount = amount - (amount / 1000); // 99.9%
+
         // Warp to before deadline
         uint256 reclaimTime = fuzzDeadline - timeBeforeDeadline;
         vm.warp(reclaimTime);
@@ -435,7 +458,7 @@ contract CryptoHeirTest is Test {
         vm.prank(depositor);
         cryptoHeir.reclaim(inheritanceId);
 
-        assertEq(depositor.balance - balanceBefore, amount);
+        assertEq(depositor.balance - balanceBefore, reclaimAmount);
         (, , , , , bool claimed) = cryptoHeir.getInheritance(inheritanceId);
         assertTrue(claimed);
         assertEq(address(cryptoHeir).balance, 0);
@@ -495,7 +518,9 @@ contract CryptoHeirTest is Test {
         }
 
         assertEq(cryptoHeir.nextInheritanceId(), count);
-        assertEq(address(cryptoHeir).balance, uint256(count) * 1 ether);
+        // Calculate net amount after deposit fees (99.9% per deposit)
+        uint256 netPerDeposit = 1 ether - (1 ether / 1000);
+        assertEq(address(cryptoHeir).balance, uint256(count) * netPerDeposit);
     }
 
     function testFuzz_ContractBalanceAccounting(uint8 depositCount, uint96 baseAmount) public {
@@ -504,18 +529,20 @@ contract CryptoHeirTest is Test {
 
         vm.deal(depositor, type(uint96).max);
 
-        uint256 totalDeposited = 0;
+        uint256 totalStoredInContract = 0;
 
         // Create multiple inheritances
         for (uint256 i = 0; i < depositCount; i++) {
             uint256 amount = baseAmount + (i * 0.1 ether);
             vm.prank(depositor);
             cryptoHeir.deposit{value: amount}(address(0), beneficiary, amount, block.timestamp + 30 days);
-            totalDeposited += amount;
+            // Calculate net amount stored in contract after deposit fee
+            uint256 netAmount = amount - (amount / 1000);
+            totalStoredInContract += netAmount;
         }
 
-        // Verify contract balance matches total deposits
-        assertEq(address(cryptoHeir).balance, totalDeposited);
+        // Verify contract balance matches total net deposits (after deposit fees)
+        assertEq(address(cryptoHeir).balance, totalStoredInContract);
 
         // Warp past deadline and claim all
         vm.warp(block.timestamp + 31 days);
