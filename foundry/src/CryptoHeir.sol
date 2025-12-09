@@ -114,6 +114,7 @@ contract CryptoHeir is ReentrancyGuard {
     function deposit(address _token, address _beneficiary, uint256 _amount, uint256 _deadline)
         external
         payable
+        nonReentrant
         returns (uint256)
     {
         if (_beneficiary == address(0)) revert InvalidBeneficiary();
