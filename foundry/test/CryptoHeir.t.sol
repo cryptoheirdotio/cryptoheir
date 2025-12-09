@@ -555,4 +555,150 @@ contract CryptoHeirTest is Test {
         // Verify contract is empty after all claims
         assertEq(address(cryptoHeir).balance, 0);
     }
+
+    // ============ FEE COLLECTOR TRANSFER TESTS ============
+
+    function testFeeCollectorTransferSuccessful() public {
+        address newCollector = address(0x9999);
+        address initialCollector = address(this);
+
+        // Verify initial fee collector
+        assertEq(cryptoHeir.feeCollector(), initialCollector);
+
+        // Initiate transfer
+        cryptoHeir.transferFeeCollector(newCollector);
+
+        // Verify pending collector is set
+        assertEq(cryptoHeir.pendingFeeCollector(), newCollector);
+        assertEq(cryptoHeir.feeCollector(), initialCollector); // Still the old one
+
+        // Accept transfer as new collector
+        vm.prank(newCollector);
+        cryptoHeir.acceptFeeCollector();
+
+        // Verify transfer completed
+        assertEq(cryptoHeir.feeCollector(), newCollector);
+        assertEq(cryptoHeir.pendingFeeCollector(), address(0));
+    }
+
+    function testFeeCollectorTransferRevertsOnlyCurrentCollector() public {
+        address newCollector = address(0x9999);
+
+        // Try to transfer from non-fee-collector address
+        vm.startPrank(depositor);
+        vm.expectRevert(CryptoHeir.OnlyFeeCollector.selector);
+        cryptoHeir.transferFeeCollector(newCollector);
+        vm.stopPrank();
+    }
+
+    function testFeeCollectorTransferRevertsZeroAddress() public {
+        vm.expectRevert(CryptoHeir.InvalidFeeCollector.selector);
+        cryptoHeir.transferFeeCollector(address(0));
+    }
+
+    function testFeeCollectorAcceptRevertsOnlyPending() public {
+        address newCollector = address(0x9999);
+        address wrongAddress = address(0x8888);
+
+        // Initiate transfer
+        cryptoHeir.transferFeeCollector(newCollector);
+
+        // Try to accept from wrong address
+        vm.startPrank(wrongAddress);
+        vm.expectRevert(CryptoHeir.NoPendingTransfer.selector);
+        cryptoHeir.acceptFeeCollector();
+        vm.stopPrank();
+    }
+
+    function testFeeCollectorAcceptRevertsNoPending() public {
+        // Try to accept when no pending transfer
+        vm.expectRevert(CryptoHeir.NoPendingTransfer.selector);
+        cryptoHeir.acceptFeeCollector();
+    }
+
+    function testFeesGoToCurrentCollectorDuringPendingTransfer() public {
+        address newCollector = address(0x9999);
+        vm.deal(newCollector, 1 ether);
+
+        // Initiate transfer
+        cryptoHeir.transferFeeCollector(newCollector);
+
+        uint256 initialBalance = address(this).balance;
+
+        // Make a deposit while transfer is pending
+        vm.prank(depositor);
+        cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
+
+        // Verify fees went to current collector (not pending)
+        uint256 expectedFee = DEPOSIT_AMOUNT / 1000;
+        assertEq(address(this).balance - initialBalance, expectedFee);
+
+        // Verify new collector didn't receive fees
+        assertEq(newCollector.balance, 1 ether);
+    }
+
+    function testFeesGoToNewCollectorAfterTransfer() public {
+        address newCollector = address(0x9999);
+        vm.deal(newCollector, 1 ether);
+
+        // Complete transfer
+        cryptoHeir.transferFeeCollector(newCollector);
+        vm.prank(newCollector);
+        cryptoHeir.acceptFeeCollector();
+
+        // Make a deposit after transfer
+        vm.prank(depositor);
+        cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
+
+        // Verify fees went to new collector
+        uint256 expectedFee = DEPOSIT_AMOUNT / 1000;
+        assertEq(newCollector.balance, 1 ether + expectedFee);
+    }
+
+    function testFeeCollectorCanBeTransferredMultipleTimes() public {
+        address collector2 = address(0x9999);
+        address collector3 = address(0x8888);
+
+        // First transfer
+        cryptoHeir.transferFeeCollector(collector2);
+        vm.prank(collector2);
+        cryptoHeir.acceptFeeCollector();
+
+        assertEq(cryptoHeir.feeCollector(), collector2);
+
+        // Second transfer (from new collector)
+        vm.prank(collector2);
+        cryptoHeir.transferFeeCollector(collector3);
+
+        vm.prank(collector3);
+        cryptoHeir.acceptFeeCollector();
+
+        assertEq(cryptoHeir.feeCollector(), collector3);
+    }
+
+    function testFeeCollectorCanChangeMindsBeforeAcceptance() public {
+        address firstChoice = address(0x9999);
+        address secondChoice = address(0x8888);
+
+        // Propose first collector
+        cryptoHeir.transferFeeCollector(firstChoice);
+        assertEq(cryptoHeir.pendingFeeCollector(), firstChoice);
+
+        // Change mind and propose different collector (overwrites)
+        cryptoHeir.transferFeeCollector(secondChoice);
+        assertEq(cryptoHeir.pendingFeeCollector(), secondChoice);
+
+        // First choice can no longer accept
+        vm.startPrank(firstChoice);
+        vm.expectRevert(CryptoHeir.NoPendingTransfer.selector);
+        cryptoHeir.acceptFeeCollector();
+        vm.stopPrank();
+
+        // Second choice can accept
+        vm.prank(secondChoice);
+        cryptoHeir.acceptFeeCollector();
+
+        assertEq(cryptoHeir.feeCollector(), secondChoice);
+        assertEq(cryptoHeir.pendingFeeCollector(), address(0));
+    }
 }
