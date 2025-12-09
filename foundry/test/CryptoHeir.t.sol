@@ -57,14 +57,13 @@ contract CryptoHeirTest is Test {
     }
 
     function testDeposit() public {
-        vm.startPrank(depositor);
-
         // After 0.1% deposit fee, net amount is 99.9% of deposit
         uint256 netAmount = DEPOSIT_AMOUNT - (DEPOSIT_AMOUNT / 1000);
 
         vm.expectEmit(true, true, true, true);
         emit InheritanceCreated(0, depositor, beneficiary, address(0), netAmount, deadline);
 
+        vm.prank(depositor);
         uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
         assertEq(inheritanceId, 0);
@@ -84,45 +83,31 @@ contract CryptoHeirTest is Test {
         assertEq(_amount, netAmount);
         assertEq(_deadline, deadline);
         assertFalse(_claimed);
-
-        vm.stopPrank();
     }
 
     function testDepositRevertsOnZeroAddress() public {
-        vm.startPrank(depositor);
-
         vm.expectRevert(CryptoHeir.InvalidBeneficiary.selector);
+        vm.prank(depositor);
         cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), address(0), DEPOSIT_AMOUNT, deadline);
-
-        vm.stopPrank();
     }
 
     function testDepositRevertsOnSelfBeneficiary() public {
-        vm.startPrank(depositor);
-
         vm.expectRevert(CryptoHeir.InvalidBeneficiary.selector);
+        vm.prank(depositor);
         cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), depositor, DEPOSIT_AMOUNT, deadline);
-
-        vm.stopPrank();
     }
 
     function testDepositRevertsOnPastDeadline() public {
-        vm.startPrank(depositor);
-
         uint256 pastDeadline = block.timestamp - 1;
         vm.expectRevert(CryptoHeir.InvalidDeadline.selector);
+        vm.prank(depositor);
         cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, pastDeadline);
-
-        vm.stopPrank();
     }
 
     function testDepositRevertsOnZeroAmount() public {
-        vm.startPrank(depositor);
-
         vm.expectRevert(CryptoHeir.InsufficientAmount.selector);
+        vm.prank(depositor);
         cryptoHeir.deposit{value: 0}(address(0), beneficiary, 0, deadline);
-
-        vm.stopPrank();
     }
 
     function testClaimAfterDeadline() public {
@@ -139,14 +124,11 @@ contract CryptoHeirTest is Test {
         uint256 netAmountAfterDeposit = DEPOSIT_AMOUNT - (DEPOSIT_AMOUNT / 1000); // 99.9%
         uint256 claimAmount = netAmountAfterDeposit - (netAmountAfterDeposit / 100); // 99% of stored
 
-        vm.startPrank(beneficiary);
-
         vm.expectEmit(true, true, false, true);
         emit InheritanceClaimed(inheritanceId, beneficiary, address(0), claimAmount);
 
+        vm.prank(beneficiary);
         cryptoHeir.claim(inheritanceId);
-
-        vm.stopPrank();
 
         uint256 beneficiaryBalanceAfter = beneficiary.balance;
         assertEq(beneficiaryBalanceAfter - beneficiaryBalanceBefore, claimAmount);
@@ -159,12 +141,9 @@ contract CryptoHeirTest is Test {
         vm.prank(depositor);
         uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
-        vm.startPrank(beneficiary);
-
         vm.expectRevert(CryptoHeir.DeadlineNotReached.selector);
+        vm.prank(beneficiary);
         cryptoHeir.claim(inheritanceId);
-
-        vm.stopPrank();
     }
 
     function testClaimRevertsOnNonBeneficiary() public {
@@ -173,12 +152,9 @@ contract CryptoHeirTest is Test {
 
         vm.warp(deadline + 1);
 
-        vm.startPrank(other);
-
         vm.expectRevert(CryptoHeir.OnlyBeneficiary.selector);
+        vm.prank(other);
         cryptoHeir.claim(inheritanceId);
-
-        vm.stopPrank();
     }
 
     function testClaimRevertsOnAlreadyClaimed() public {
@@ -205,14 +181,11 @@ contract CryptoHeirTest is Test {
         // Calculate expected reclaim amount (stored amount after deposit fee, no additional fee on reclaim)
         uint256 reclaimAmount = DEPOSIT_AMOUNT - (DEPOSIT_AMOUNT / 1000); // 99.9%
 
-        vm.startPrank(depositor);
-
         vm.expectEmit(true, true, false, true);
         emit InheritanceReclaimed(inheritanceId, depositor, address(0), reclaimAmount);
 
+        vm.prank(depositor);
         cryptoHeir.reclaim(inheritanceId);
-
-        vm.stopPrank();
 
         uint256 depositorBalanceAfter = depositor.balance;
         assertEq(depositorBalanceAfter - depositorBalanceBefore, reclaimAmount);
@@ -227,31 +200,24 @@ contract CryptoHeirTest is Test {
 
         vm.warp(deadline + 1);
 
-        vm.startPrank(depositor);
-
         vm.expectRevert(CryptoHeir.DeadlineAlreadyPassed.selector);
+        vm.prank(depositor);
         cryptoHeir.reclaim(inheritanceId);
-
-        vm.stopPrank();
     }
 
     function testReclaimRevertsOnNonDepositor() public {
         vm.prank(depositor);
         uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
-        vm.startPrank(other);
-
         vm.expectRevert(CryptoHeir.OnlyDepositor.selector);
+        vm.prank(other);
         cryptoHeir.reclaim(inheritanceId);
-
-        vm.stopPrank();
     }
 
     function testReclaimRevertsOnAlreadyClaimed() public {
-        vm.prank(depositor);
+        vm.startPrank(depositor);
         uint256 inheritanceId = cryptoHeir.deposit{value: DEPOSIT_AMOUNT}(address(0), beneficiary, DEPOSIT_AMOUNT, deadline);
 
-        vm.startPrank(depositor);
         cryptoHeir.reclaim(inheritanceId);
 
         vm.expectRevert(CryptoHeir.AlreadyClaimed.selector);
@@ -266,14 +232,11 @@ contract CryptoHeirTest is Test {
 
         uint256 newDeadline = deadline + 30 days;
 
-        vm.startPrank(depositor);
-
         vm.expectEmit(true, false, false, true);
         emit DeadlineExtended(inheritanceId, deadline, newDeadline);
 
+        vm.prank(depositor);
         cryptoHeir.extendDeadline(inheritanceId, newDeadline);
-
-        vm.stopPrank();
 
         (, , , , uint256 _deadline, ) = cryptoHeir.getInheritance(inheritanceId);
         assertEq(_deadline, newDeadline);
@@ -285,12 +248,9 @@ contract CryptoHeirTest is Test {
 
         uint256 pastDeadline = block.timestamp - 1;
 
-        vm.startPrank(depositor);
-
         vm.expectRevert(CryptoHeir.InvalidDeadline.selector);
+        vm.prank(depositor);
         cryptoHeir.extendDeadline(inheritanceId, pastDeadline);
-
-        vm.stopPrank();
     }
 
     function testExtendDeadlineRevertsOnNonDepositor() public {
@@ -299,12 +259,9 @@ contract CryptoHeirTest is Test {
 
         uint256 newDeadline = deadline + 30 days;
 
-        vm.startPrank(other);
-
         vm.expectRevert(CryptoHeir.OnlyDepositor.selector);
+        vm.prank(other);
         cryptoHeir.extendDeadline(inheritanceId, newDeadline);
-
-        vm.stopPrank();
     }
 
     function testExtendDeadlineRevertsOnAlreadyClaimed() public {
@@ -318,12 +275,9 @@ contract CryptoHeirTest is Test {
 
         uint256 newDeadline = deadline + 30 days;
 
-        vm.startPrank(depositor);
-
         vm.expectRevert(CryptoHeir.AlreadyClaimed.selector);
+        vm.prank(depositor);
         cryptoHeir.extendDeadline(inheritanceId, newDeadline);
-
-        vm.stopPrank();
     }
 
     function testMultipleDeposits() public {
@@ -585,10 +539,9 @@ contract CryptoHeirTest is Test {
         address newCollector = address(0x9999);
 
         // Try to transfer from non-fee-collector address
-        vm.startPrank(depositor);
         vm.expectRevert(CryptoHeir.OnlyFeeCollector.selector);
+        vm.prank(depositor);
         cryptoHeir.transferFeeCollector(newCollector);
-        vm.stopPrank();
     }
 
     function testFeeCollectorTransferRevertsZeroAddress() public {
@@ -604,10 +557,9 @@ contract CryptoHeirTest is Test {
         cryptoHeir.transferFeeCollector(newCollector);
 
         // Try to accept from wrong address
-        vm.startPrank(wrongAddress);
         vm.expectRevert(CryptoHeir.NoPendingTransfer.selector);
+        vm.prank(wrongAddress);
         cryptoHeir.acceptFeeCollector();
-        vm.stopPrank();
     }
 
     function testFeeCollectorAcceptRevertsNoPending() public {
@@ -689,10 +641,9 @@ contract CryptoHeirTest is Test {
         assertEq(cryptoHeir.pendingFeeCollector(), secondChoice);
 
         // First choice can no longer accept
-        vm.startPrank(firstChoice);
         vm.expectRevert(CryptoHeir.NoPendingTransfer.selector);
+        vm.prank(firstChoice);
         cryptoHeir.acceptFeeCollector();
-        vm.stopPrank();
 
         // Second choice can accept
         vm.prank(secondChoice);
