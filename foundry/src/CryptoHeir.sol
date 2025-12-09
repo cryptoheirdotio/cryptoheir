@@ -13,8 +13,11 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract CryptoHeir is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    // Contract deployer who receives fees
-    address public immutable DEPLOYER;
+    // Fee collector who receives fees
+    address public feeCollector;
+
+    // Pending fee collector for two-step transfer
+    address private _pendingFeeCollector;
 
     struct Inheritance {
         address depositor;
@@ -68,6 +71,16 @@ contract CryptoHeir is ReentrancyGuard {
         string feeType
     );
 
+    event FeeCollectorTransferStarted(
+        address indexed currentCollector,
+        address indexed pendingCollector
+    );
+
+    event FeeCollectorTransferred(
+        address indexed previousCollector,
+        address indexed newCollector
+    );
+
     // Errors
     error InvalidBeneficiary();
     error InvalidDeadline();
@@ -79,12 +92,15 @@ contract CryptoHeir is ReentrancyGuard {
     error DeadlineAlreadyPassed();
     error OnlyDepositor();
     error OnlyBeneficiary();
+    error OnlyFeeCollector();
+    error InvalidFeeCollector();
+    error NoPendingTransfer();
 
     /**
-     * @notice Constructor sets the deployer address for fee collection
+     * @notice Constructor sets the initial fee collector to the deployer
      */
     constructor() {
-        DEPLOYER = msg.sender;
+        feeCollector = msg.sender;
     }
 
     /**
@@ -117,8 +133,8 @@ contract CryptoHeir is ReentrancyGuard {
             depositFee = amount / 1000;
             netAmount = amount - depositFee;
 
-            // Transfer fee to deployer
-            (bool success, ) = DEPLOYER.call{value: depositFee}("");
+            // Transfer fee to fee collector
+            (bool success, ) = feeCollector.call{value: depositFee}("");
             require(success, "Fee transfer failed");
         } else {
             // ERC20 token deposit
@@ -133,11 +149,11 @@ contract CryptoHeir is ReentrancyGuard {
             // Transfer tokens from sender to this contract
             IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
 
-            // Transfer fee to deployer
-            IERC20(_token).safeTransfer(DEPLOYER, depositFee);
+            // Transfer fee to fee collector
+            IERC20(_token).safeTransfer(feeCollector, depositFee);
         }
 
-        emit FeeCollected(DEPLOYER, _token, depositFee, "deposit");
+        emit FeeCollected(feeCollector, _token, depositFee, "deposit");
 
         uint256 inheritanceId = nextInheritanceId++;
 
@@ -176,19 +192,19 @@ contract CryptoHeir is ReentrancyGuard {
         uint256 netAmount = amount - claimFee;
 
         emit InheritanceClaimed(_inheritanceId, msg.sender, token, netAmount);
-        emit FeeCollected(DEPLOYER, token, claimFee, "claim");
+        emit FeeCollected(feeCollector, token, claimFee, "claim");
 
         if (token == address(0)) {
-            // Transfer fee to deployer
-            (bool feeSuccess, ) = DEPLOYER.call{value: claimFee}("");
+            // Transfer fee to fee collector
+            (bool feeSuccess, ) = feeCollector.call{value: claimFee}("");
             require(feeSuccess, "Fee transfer failed");
 
             // Transfer remaining to beneficiary
             (bool success, ) = msg.sender.call{value: netAmount}("");
             require(success, "Transfer failed");
         } else {
-            // Transfer fee to deployer
-            IERC20(token).safeTransfer(DEPLOYER, claimFee);
+            // Transfer fee to fee collector
+            IERC20(token).safeTransfer(feeCollector, claimFee);
 
             // Transfer remaining to beneficiary
             IERC20(token).safeTransfer(msg.sender, netAmount);
@@ -240,6 +256,41 @@ contract CryptoHeir is ReentrancyGuard {
         inheritance.deadline = _newDeadline;
 
         emit DeadlineExtended(_inheritanceId, oldDeadline, _newDeadline);
+    }
+
+    /**
+     * @notice Initiate fee collector transfer (two-step process)
+     * @param newFeeCollector The address of the new fee collector
+     * @dev Only current fee collector can call this. New collector must accept.
+     */
+    function transferFeeCollector(address newFeeCollector) external {
+        if (msg.sender != feeCollector) revert OnlyFeeCollector();
+        if (newFeeCollector == address(0)) revert InvalidFeeCollector();
+
+        _pendingFeeCollector = newFeeCollector;
+        emit FeeCollectorTransferStarted(feeCollector, newFeeCollector);
+    }
+
+    /**
+     * @notice Accept fee collector role (completes two-step transfer)
+     * @dev Only pending fee collector can call this
+     */
+    function acceptFeeCollector() external {
+        if (msg.sender != _pendingFeeCollector) revert NoPendingTransfer();
+
+        address previousCollector = feeCollector;
+        feeCollector = _pendingFeeCollector;
+        _pendingFeeCollector = address(0);
+
+        emit FeeCollectorTransferred(previousCollector, feeCollector);
+    }
+
+    /**
+     * @notice Get the pending fee collector address
+     * @return The address of the pending fee collector (address(0) if none)
+     */
+    function pendingFeeCollector() external view returns (address) {
+        return _pendingFeeCollector;
     }
 
     /**
