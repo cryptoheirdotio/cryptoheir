@@ -153,113 +153,159 @@ export const InheritanceManager = ({ account, initialId }) => {
   }, [initialId, contractAddress, publicClient]);
 
   return (
-    <div className="card bg-base-100 shadow-xl">
-      <div className="card-body">
-        <h2 className="card-title text-2xl">Manage Inheritance</h2>
+    <div className="glass-card shadow-smooth-xl rounded-2xl">
+      <div className="card-body p-8">
+        <h2 className="card-title text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          Manage Inheritance
+        </h2>
+        <p className="text-sm opacity-70 mb-6">View and manage your inheritance details</p>
         <div className="form-control">
           <label className="label" htmlFor="inheritanceId">
-            <span className="label-text">Inheritance ID:</span>
+            <span className="label-text font-semibold text-base">Inheritance ID:</span>
           </label>
-          <div className="join">
+          <div className="join shadow-smooth">
             <input
               id="inheritanceId"
               type="number"
               value={inheritanceId}
               onChange={(e) => setInheritanceId(e.target.value)}
               placeholder="0"
-              className="input input-bordered join-item flex-1"
+              className="input input-bordered join-item flex-1 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
               disabled={loading}
             />
             <button
-              className="btn btn-primary join-item"
+              className="btn btn-primary join-item font-semibold"
               onClick={loadInheritance}
               disabled={loading || !inheritanceId}
             >
-              Load
+              {loadingRead ? (
+                <span className="flex items-center gap-2">
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Loading...
+                </span>
+              ) : (
+                'Load'
+              )}
             </button>
           </div>
         </div>
 
         {inheritanceData && (
-          <div className="mt-4">
-            <div className="divider">Details</div>
-            <div className="stats shadow w-full mb-4">
+          <div className="mt-6 space-y-4">
+            <div className="divider font-semibold text-lg">Details</div>
+            <div className="stats shadow-smooth-lg w-full bg-base-100/50 dark:bg-gray-800/50 backdrop-blur">
               <div className="stat">
-                <div className="stat-title">Depositor</div>
-                <div className="stat-value text-sm break-all">{inheritanceData.depositor}</div>
+                <div className="stat-title font-semibold">Depositor</div>
+                <div className="stat-value text-sm break-all font-mono">{inheritanceData.depositor}</div>
               </div>
             </div>
-            <div className="stats shadow w-full mb-4">
+            <div className="stats shadow-smooth-lg w-full bg-base-100/50 dark:bg-gray-800/50 backdrop-blur">
               <div className="stat">
-                <div className="stat-title">Beneficiary</div>
-                <div className="stat-value text-sm break-all">{inheritanceData.beneficiary}</div>
+                <div className="stat-title font-semibold">Beneficiary</div>
+                <div className="stat-value text-sm break-all font-mono">{inheritanceData.beneficiary}</div>
               </div>
             </div>
-            <div className="stats shadow w-full mb-4">
+            <div className="stats shadow-smooth-lg w-full bg-base-100/50 dark:bg-gray-800/50 backdrop-blur">
               <div className="stat">
-                <div className="stat-title">Token</div>
+                <div className="stat-title font-semibold">Token</div>
                 <div className="stat-value text-sm break-all">
                   {inheritanceData.isNativeToken ? (
-                    <span className="badge badge-primary badge-lg">Native Token</span>
+                    <span className="badge badge-primary badge-lg font-semibold shadow-smooth">Native Token</span>
                   ) : (
-                    <span className="text-xs">{inheritanceData.token}</span>
+                    <span className="text-xs font-mono">{inheritanceData.token}</span>
                   )}
                 </div>
               </div>
             </div>
-            <div className="stats stats-vertical lg:stats-horizontal shadow w-full mb-4">
+            <div className="stats stats-vertical lg:stats-horizontal shadow-smooth-lg w-full bg-base-100/50 dark:bg-gray-800/50 backdrop-blur">
               <div className="stat">
-                <div className="stat-title">Amount</div>
-                <div className="stat-value text-2xl">
-                  {inheritanceData.amount} {inheritanceData.isNativeToken ? 'tokens' : 'tokens'}
+                <div className="stat-title font-semibold">Amount</div>
+                <div className="stat-value text-2xl font-bold">
+                  {inheritanceData.amount} <span className="text-base opacity-70">tokens</span>
                 </div>
               </div>
               <div className="stat">
-                <div className="stat-title">Status</div>
+                <div className="stat-title font-semibold">Status</div>
                 <div className="stat-value text-2xl">
-                  <span className={`badge ${inheritanceData.claimed ? 'badge-error' : 'badge-success'} badge-lg`}>
+                  <span className={`badge ${inheritanceData.claimed ? 'badge-error' : 'badge-success'} badge-lg font-semibold shadow-smooth`}>
                     {inheritanceData.claimed ? 'Claimed' : 'Active'}
                   </span>
                 </div>
               </div>
             </div>
-            <div className="alert">
+            <div className="alert bg-base-200/70 dark:bg-gray-700/70 backdrop-blur shadow-smooth border border-base-300 dark:border-gray-600">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
               <div>
-                <div className="font-bold">Deadline</div>
-                <div className="text-xs">{inheritanceData.deadline}</div>
+                <div className="font-bold text-base">Deadline</div>
+                <div className="text-sm opacity-90">{inheritanceData.deadline}</div>
               </div>
             </div>
 
-            <div className="card-actions flex-col mt-4">
+            <div className="card-actions flex-col mt-6 space-y-3">
               {canClaim && (
-                <button className="btn btn-success w-full" onClick={handleClaim} disabled={loading}>
-                  Claim Funds
+                <button
+                  className="btn btn-success w-full text-lg font-semibold shadow-smooth-lg hover:shadow-smooth-xl transition-all"
+                  onClick={handleClaim}
+                  disabled={loading}
+                >
+                  {isPending && lastAction === 'claim' ? (
+                    <span className="flex items-center gap-2">
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Claiming...
+                    </span>
+                  ) : (
+                    'Claim Funds'
+                  )}
                 </button>
               )}
               {canReclaim && (
-                <button className="btn btn-warning w-full" onClick={handleReclaim} disabled={loading}>
-                  Reclaim Funds
+                <button
+                  className="btn btn-warning w-full text-lg font-semibold shadow-smooth-lg hover:shadow-smooth-xl transition-all"
+                  onClick={handleReclaim}
+                  disabled={loading}
+                >
+                  {isPending && lastAction === 'reclaim' ? (
+                    <span className="flex items-center gap-2">
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Reclaiming...
+                    </span>
+                  ) : (
+                    'Reclaim Funds'
+                  )}
                 </button>
               )}
               {canExtend && (
                 <div className="w-full">
-                  <div className="divider">Extend Deadline</div>
+                  <div className="divider font-semibold">Extend Deadline</div>
                   <div className="form-control mt-2">
                     <label className="label" htmlFor="newDays">
-                      <span className="label-text">Extend by (days):</span>
+                      <span className="label-text font-semibold text-base">Extend by (days):</span>
                     </label>
-                    <div className="join">
+                    <div className="join shadow-smooth">
                       <input
                         id="newDays"
                         type="number"
                         value={newDays}
                         onChange={(e) => setNewDays(e.target.value)}
                         placeholder="30"
-                        className="input input-bordered join-item flex-1"
+                        className="input input-bordered join-item flex-1 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                         disabled={loading}
                       />
-                      <button className="btn btn-primary join-item" onClick={handleExtend} disabled={loading}>
-                        Extend
+                      <button
+                        className="btn btn-primary join-item font-semibold"
+                        onClick={handleExtend}
+                        disabled={loading}
+                      >
+                        {isPending && lastAction === 'extend' ? (
+                          <span className="flex items-center gap-2">
+                            <span className="loading loading-spinner loading-sm"></span>
+                            Extending...
+                          </span>
+                        ) : (
+                          'Extend'
+                        )}
                       </button>
                     </div>
                   </div>
@@ -270,13 +316,19 @@ export const InheritanceManager = ({ account, initialId }) => {
         )}
 
         {error && (
-          <div className="alert alert-error mt-4">
-            <span>{error}</span>
+          <div className="alert alert-error mt-6 shadow-smooth">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{error}</span>
           </div>
         )}
         {success && (
-          <div className="alert alert-success mt-4">
-            <span>{success}</span>
+          <div className="alert alert-success mt-6 shadow-smooth">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{success}</span>
           </div>
         )}
       </div>
