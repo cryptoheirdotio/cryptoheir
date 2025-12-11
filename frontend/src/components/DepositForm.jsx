@@ -236,19 +236,22 @@ export const DepositForm = ({ account }) => {
   }, [isApprovalWriteError, approvalWriteError]);
 
   return (
-    <div className="card bg-base-100 shadow-xl">
-      <div className="card-body">
-        <h2 className="card-title text-2xl">Create Inheritance</h2>
-        <form onSubmit={handleDeposit} className="space-y-4">
+    <div className="glass-card shadow-smooth-xl rounded-2xl">
+      <div className="card-body p-8">
+        <h2 className="card-title text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          Create Inheritance
+        </h2>
+        <p className="text-sm opacity-70 mb-6">Set up a time-locked transfer for your beneficiary</p>
+        <form onSubmit={handleDeposit} className="space-y-6">
           <div className="form-control">
             <label className="label" htmlFor="tokenType">
-              <span className="label-text">Token Type:</span>
+              <span className="label-text font-semibold text-base">Token Type:</span>
             </label>
             <select
               id="tokenType"
               value={tokenType}
               onChange={(e) => setTokenType(e.target.value)}
-              className="select select-bordered w-full"
+              className="select select-bordered w-full focus:ring-2 focus:ring-primary focus:outline-none transition-all"
               disabled={loading}
             >
               <option value="native">Native Token (ETH/MATIC/etc)</option>
@@ -258,7 +261,7 @@ export const DepositForm = ({ account }) => {
           {tokenType === 'erc20' && (
             <div className="form-control">
               <label className="label" htmlFor="tokenAddress">
-                <span className="label-text">Token Contract Address:</span>
+                <span className="label-text font-semibold text-base">Token Contract Address:</span>
               </label>
               <input
                 id="tokenAddress"
@@ -266,7 +269,7 @@ export const DepositForm = ({ account }) => {
                 value={tokenAddress}
                 onChange={(e) => setTokenAddress(e.target.value)}
                 placeholder="0x..."
-                className="input input-bordered w-full"
+                className="input input-bordered w-full focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                 required={tokenType === 'erc20'}
                 disabled={loading}
               />
@@ -274,7 +277,7 @@ export const DepositForm = ({ account }) => {
           )}
           <div className="form-control">
             <label className="label" htmlFor="beneficiary">
-              <span className="label-text">Beneficiary Address:</span>
+              <span className="label-text font-semibold text-base">Beneficiary Address:</span>
             </label>
             <input
               id="beneficiary"
@@ -282,14 +285,14 @@ export const DepositForm = ({ account }) => {
               value={beneficiary}
               onChange={(e) => setBeneficiary(e.target.value)}
               placeholder="0x..."
-              className="input input-bordered w-full"
+              className="input input-bordered w-full focus:ring-2 focus:ring-primary focus:outline-none transition-all"
               required
               disabled={loading}
             />
           </div>
           <div className="form-control">
             <label className="label" htmlFor="amount">
-              <span className="label-text">Amount:</span>
+              <span className="label-text font-semibold text-base">Amount:</span>
             </label>
             <input
               id="amount"
@@ -298,14 +301,14 @@ export const DepositForm = ({ account }) => {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.1"
-              className="input input-bordered w-full"
+              className="input input-bordered w-full focus:ring-2 focus:ring-primary focus:outline-none transition-all"
               required
               disabled={loading}
             />
           </div>
           <div className="form-control">
             <label className="label" htmlFor="days">
-              <span className="label-text">Lock Period (days):</span>
+              <span className="label-text font-semibold text-base">Lock Period (days):</span>
             </label>
             <input
               id="days"
@@ -313,7 +316,7 @@ export const DepositForm = ({ account }) => {
               value={days}
               onChange={(e) => setDays(e.target.value)}
               placeholder="30"
-              className="input input-bordered w-full"
+              className="input input-bordered w-full focus:ring-2 focus:ring-primary focus:outline-none transition-all"
               required
               disabled={loading}
             />
@@ -322,30 +325,57 @@ export const DepositForm = ({ account }) => {
             <button
               type="button"
               onClick={handleApprove}
-              className="btn btn-warning w-full"
+              className="btn btn-warning w-full text-lg font-semibold shadow-smooth-lg hover:shadow-smooth-xl transition-all"
               disabled={loading || !tokenAddress || !isAddress(tokenAddress) || !amount}
             >
-              {isApprovalPending || isApprovalConfirming ? 'Approving...' : 'Approve Token'}
+              {isApprovalPending || isApprovalConfirming ? (
+                <span className="flex items-center gap-2">
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Approving...
+                </span>
+              ) : (
+                'Approve Token'
+              )}
             </button>
           ) : (
-            <button type="submit" className="btn btn-primary w-full" disabled={loading}>
-              {isDepositPending || isDepositConfirming ? 'Processing...' : 'Deposit'}
+            <button
+              type="submit"
+              className="btn btn-primary w-full text-lg font-semibold shadow-smooth-lg hover:shadow-smooth-xl transition-all"
+              disabled={loading}
+            >
+              {isDepositPending || isDepositConfirming ? (
+                <span className="flex items-center gap-2">
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Processing...
+                </span>
+              ) : (
+                'Deposit'
+              )}
             </button>
           )}
           {tokenType === 'erc20' && !needsApproval && tokenAddress && (
-            <div className="alert alert-info">
-              <span>Token approved! You can now deposit.</span>
+            <div className="alert alert-info shadow-smooth">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span className="font-medium">Token approved! You can now deposit.</span>
             </div>
           )}
         </form>
         {error && (
-          <div className="alert alert-error mt-4">
-            <span>{error}</span>
+          <div className="alert alert-error mt-6 shadow-smooth">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{error}</span>
           </div>
         )}
         {success && (
-          <div className="alert alert-success mt-4">
-            <span>{success}</span>
+          <div className="alert alert-success mt-6 shadow-smooth">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{success}</span>
           </div>
         )}
       </div>
