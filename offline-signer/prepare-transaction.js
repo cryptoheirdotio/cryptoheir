@@ -50,10 +50,19 @@ const SUPPORTED_NETWORKS = {
  *     node prepare-transaction.js --deploy --network sepolia [options]
  *
  *   Function calls:
- *     node prepare-transaction.js --call deposit --network sepolia --beneficiary <address> --deadline <timestamp> --value <eth>
- *     node prepare-transaction.js --call claim --network mainnet --inheritance-id <id>
- *     node prepare-transaction.js --call reclaim --network polygon --inheritance-id <id>
- *     node prepare-transaction.js --call extendDeadline --network arbitrum --inheritance-id <id> --deadline <timestamp>
+ *     Native token deposit:
+ *       node prepare-transaction.js --call deposit --network sepolia --beneficiary <address> --deadline <timestamp> --value <eth>
+ *       node prepare-transaction.js --call deposit --network sepolia --token 0x0000000000000000000000000000000000000000 --beneficiary <address> --deadline <timestamp> --value <eth>
+ *
+ *     ERC20 token deposit:
+ *       node prepare-transaction.js --call deposit --network sepolia --token <erc20-address> --beneficiary <address> --amount <tokens> --deadline <timestamp>
+ *
+ *     Other functions:
+ *       node prepare-transaction.js --call claim --network mainnet --inheritance-id <id>
+ *       node prepare-transaction.js --call reclaim --network polygon --inheritance-id <id>
+ *       node prepare-transaction.js --call extendDeadline --network arbitrum --inheritance-id <id> --deadline <timestamp>
+ *       node prepare-transaction.js --call transferFeeCollector --network mainnet --new-fee-collector <address>
+ *       node prepare-transaction.js --call acceptFeeCollector --network mainnet
  *
  * Options:
  *   --network <name>          Pre-configured network name (required with INFURA_API_KEY)
@@ -67,6 +76,13 @@ const SUPPORTED_NETWORKS = {
  *   --max-fee <gwei>          Override max fee per gas (EIP-1559)
  *   --priority-fee <gwei>     Override priority fee (EIP-1559)
  *   --contract <address>      Contract address (required for function calls)
+ *   --token <address>         Token address (use 0x0000000000000000000000000000000000000000 for native, defaults to native)
+ *   --amount <tokens>         Token amount (for ERC20 deposits, in token decimals)
+ *   --value <eth>             Native token value (for native token deposits)
+ *   --beneficiary <address>   Beneficiary address (for deposit)
+ *   --deadline <timestamp>    Unix timestamp deadline (for deposit and extendDeadline)
+ *   --inheritance-id <id>     Inheritance ID (for claim, reclaim, extendDeadline)
+ *   --new-fee-collector <addr> New fee collector address (for transferFeeCollector)
  */
 
 function parseArgs() {
@@ -143,6 +159,18 @@ function parseArgs() {
         parsed.params.inheritanceId = next;
         i++;
         break;
+      case '--token':
+        parsed.params.token = next;
+        i++;
+        break;
+      case '--amount':
+        parsed.params.amount = next;
+        i++;
+        break;
+      case '--new-fee-collector':
+        parsed.params.newFeeCollector = next;
+        i++;
+        break;
     }
   }
 
@@ -153,9 +181,14 @@ function validateArgs(parsed) {
   if (!parsed.mode) {
     console.error('Error: Must specify --deploy or --call <function>');
     console.error('\nUsage examples:');
-    console.error('  node prepare-transaction.js --deploy --network sepolia');
-    console.error('  node prepare-transaction.js --call deposit --network sepolia --beneficiary 0x... --deadline 1735689600 --value 0.1');
-    console.error('  node prepare-transaction.js --call claim --network mainnet --inheritance-id 0 --contract 0x...');
+    console.error('  Deploy contract:');
+    console.error('    node prepare-transaction.js --deploy --network sepolia');
+    console.error('  Native token deposit:');
+    console.error('    node prepare-transaction.js --call deposit --network sepolia --beneficiary 0x... --deadline 1735689600 --value 0.1');
+    console.error('  ERC20 token deposit:');
+    console.error('    node prepare-transaction.js --call deposit --network sepolia --token 0xABC... --beneficiary 0x... --amount 100 --deadline 1735689600');
+    console.error('  Claim:');
+    console.error('    node prepare-transaction.js --call claim --network mainnet --inheritance-id 0 --contract 0x...');
     process.exit(1);
   }
 
@@ -174,7 +207,7 @@ function validateArgs(parsed) {
   }
 
   if (parsed.mode === 'call') {
-    const validFunctions = ['deposit', 'claim', 'reclaim', 'extendDeadline'];
+    const validFunctions = ['deposit', 'claim', 'reclaim', 'extendDeadline', 'transferFeeCollector', 'acceptFeeCollector'];
     if (!validFunctions.includes(parsed.functionName)) {
       console.error(`Error: Invalid function name: ${parsed.functionName}`);
       console.error(`Valid functions: ${validFunctions.join(', ')}`);
@@ -199,6 +232,42 @@ function validateArgs(parsed) {
           console.error('Error: deposit requires --beneficiary and --deadline');
           process.exit(1);
         }
+
+        // Default token to address(0) for native token if not specified
+        if (!parsed.params.token) {
+          parsed.params.token = '0x0000000000000000000000000000000000000000';
+        }
+
+        // Normalize address(0) to proper format
+        if (parsed.params.token.toLowerCase() === 'address(0)') {
+          parsed.params.token = '0x0000000000000000000000000000000000000000';
+        }
+
+        // Validate based on token type
+        const isNativeToken = parsed.params.token === '0x0000000000000000000000000000000000000000';
+
+        if (isNativeToken) {
+          // Native token: require --value, amount is ignored (default to 0)
+          if (!parsed.params.value) {
+            console.error('Error: Native token deposit requires --value');
+            process.exit(1);
+          }
+          // Set amount to 0 as it's ignored by the contract for native tokens
+          if (!parsed.params.amount) {
+            parsed.params.amount = '0';
+          }
+        } else {
+          // ERC20 token: require --amount, --value should not be set
+          if (!parsed.params.amount) {
+            console.error('Error: ERC20 token deposit requires --amount');
+            console.error('Note: Provide amount in smallest unit (e.g., for USDC with 6 decimals, 1 USDC = 1000000)');
+            process.exit(1);
+          }
+          if (parsed.params.value) {
+            console.error('Error: Do not use --value for ERC20 deposits (use --amount instead)');
+            process.exit(1);
+          }
+        }
         break;
       case 'claim':
       case 'reclaim':
@@ -216,6 +285,15 @@ function validateArgs(parsed) {
           console.error('Error: extendDeadline requires --deadline');
           process.exit(1);
         }
+        break;
+      case 'transferFeeCollector':
+        if (!parsed.params.newFeeCollector) {
+          console.error('Error: transferFeeCollector requires --new-fee-collector');
+          process.exit(1);
+        }
+        break;
+      case 'acceptFeeCollector':
+        // No parameters required
         break;
     }
   }
@@ -243,13 +321,22 @@ function encodeFunctionCall(abi, functionName, params) {
 
   switch (functionName) {
     case 'deposit':
-      return iface.encodeFunctionData('deposit', [params.beneficiary, params.deadline]);
+      return iface.encodeFunctionData('deposit', [
+        params.token,
+        params.beneficiary,
+        params.amount,
+        params.deadline
+      ]);
     case 'claim':
       return iface.encodeFunctionData('claim', [params.inheritanceId]);
     case 'reclaim':
       return iface.encodeFunctionData('reclaim', [params.inheritanceId]);
     case 'extendDeadline':
       return iface.encodeFunctionData('extendDeadline', [params.inheritanceId, params.deadline]);
+    case 'transferFeeCollector':
+      return iface.encodeFunctionData('transferFeeCollector', [params.newFeeCollector]);
+    case 'acceptFeeCollector':
+      return iface.encodeFunctionData('acceptFeeCollector', []);
     default:
       throw new Error(`Unknown function: ${functionName}`);
   }
