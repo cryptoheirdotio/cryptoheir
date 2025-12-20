@@ -14,7 +14,10 @@ foundry/slither-env/
 .env
 
 # Signed transaction files
-offline-signer/signed-*.json
+/offline-signer/signed-*.json
+
+# offline-signer test files
+/offline-signer/test-outputs
 
 # Node modules
 node_modules/
