@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useDepositForm } from '../hooks/deposit/useDepositForm';
 import { useERC20Approval } from '../hooks/deposit/useERC20Approval';
@@ -10,8 +10,8 @@ import { AlertMessages } from './DepositForm/AlertMessages';
 
 export const DepositForm = ({ account }) => {
   const { contractAddress } = useOutletContext();
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [manualError, setManualError] = useState('');
+  const [manualSuccess, setManualSuccess] = useState('');
 
   // Form state management
   const { formData, updateField, resetForm } = useDepositForm();
@@ -44,50 +44,47 @@ export const DepositForm = ({ account }) => {
   } = useInheritanceDeposit({
     contractAddress,
     onSuccess: (id) => {
-      setSuccess(`Successfully deposited! Inheritance ID: ${id}`);
+      setManualSuccess(`Successfully deposited! Inheritance ID: ${id}`);
       resetForm();
     }
   });
 
   const loading = isDepositPending || isDepositConfirming || isApprovalPending || isApprovalConfirming;
 
-  // Handle approval success
-  useEffect(() => {
-    if (isApprovalConfirmed) {
-      setSuccess('Approval confirmed! You can now deposit.');
-    }
-  }, [isApprovalConfirmed]);
-
-  // Handle deposit write errors
-  useEffect(() => {
+  // Derive error and success messages instead of using effects
+  const error = useMemo(() => {
+    if (manualError) return manualError;
     if (isDepositWriteError && depositWriteError) {
-      setError(depositWriteError.message || 'Failed to deposit');
+      return depositWriteError.message || 'Failed to deposit';
     }
-  }, [isDepositWriteError, depositWriteError]);
-
-  // Handle approval write errors
-  useEffect(() => {
     if (isApprovalWriteError && approvalWriteError) {
-      setError(approvalWriteError.message || 'Failed to approve');
+      return approvalWriteError.message || 'Failed to approve';
     }
-  }, [isApprovalWriteError, approvalWriteError]);
+    return '';
+  }, [manualError, isDepositWriteError, depositWriteError, isApprovalWriteError, approvalWriteError]);
+
+  const success = useMemo(() => {
+    if (manualSuccess) return manualSuccess;
+    if (isApprovalConfirmed) return 'Approval confirmed! You can now deposit.';
+    return '';
+  }, [manualSuccess, isApprovalConfirmed]);
 
   const onApprove = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setManualError('');
+    setManualSuccess('');
 
     try {
       await handleApprove();
     } catch (err) {
-      setError(err.message || 'Failed to approve');
+      setManualError(err.message || 'Failed to approve');
     }
   };
 
   const onDeposit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setManualError('');
+    setManualSuccess('');
 
     try {
       await executeDeposit({
@@ -99,7 +96,7 @@ export const DepositForm = ({ account }) => {
         needsApproval
       });
     } catch (err) {
-      setError(err.message || 'Failed to deposit');
+      setManualError(err.message || 'Failed to deposit');
     }
   };
 

@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import ThemeToggle from './ThemeToggle';
 
-export function Navigation({ account, isConnected }) {
+export function Navigation({ isConnected }) {
   return (
     <div className="glass-navbar sticky top-0 z-50 shadow-smooth-lg">
       <div className="navbar container mx-auto">

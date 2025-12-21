@@ -18,9 +18,6 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
       setError('');
 
       try {
-        // Get InheritanceCreated event ABI
-        const createdEvent = contractABI.find(item => item.type === 'event' && item.name === 'InheritanceCreated');
-
         // Query all InheritanceCreated events
         const logs = await publicClient.getLogs({
           address: contractAddress,
@@ -43,7 +40,7 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
                 transactionHash: log.transactionHash,
                 blockNumber: log.blockNumber
               };
-            } catch (err) {
+            } catch {
               return null;
             }
           })
