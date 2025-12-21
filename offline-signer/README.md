@@ -18,34 +18,34 @@ This directory contains scripts for secure offline signing of CryptoHeir transac
 ┌──────────────────────────────────────────────────────────────────────┐
 │                   Air-Gapped Signing Workflow                        │
 ├──────────────────────────────────────────────────────────────────────┤
-│                                                                        │
+│                                                                      │
 │  STEP 1: PREPARE (ONLINE MACHINE)                                    │
 │  ├─ Has: RPC_URL, SIGNER_ADDRESS                                     │
 │  ├─ Does NOT have: PRIVATE_KEY                                       │
 │  └─ Runs: node prepare-transaction.js --deploy                       │
 │     → Outputs: tx-params.json (unsigned)                             │
-│                                                                        │
+│                                                                      │
 │  ─────────────────────────────────────────────────────────────────   │
 │  TRANSFER: Copy tx-params.json to offline machine (USB/QR code)      │
 │  ─────────────────────────────────────────────────────────────────   │
-│                                                                        │
+│                                                                      │
 │  STEP 2: SIGN (OFFLINE MACHINE - AIR-GAPPED)                         │
 │  ├─ Has: PRIVATE_KEY                                                 │
 │  ├─ NO network access required                                       │
 │  ├─ Displays transaction details for review                          │
 │  └─ Runs: node sign-transaction.js tx-params.json                    │
 │     → Outputs: signed-tx.json                                        │
-│                                                                        │
+│                                                                      │
 │  ─────────────────────────────────────────────────────────────────   │
 │  TRANSFER: Copy signed-tx.json to online machine (USB/QR code)       │
 │  ─────────────────────────────────────────────────────────────────   │
-│                                                                        │
+│                                                                      │
 │  STEP 3: BROADCAST (ONLINE MACHINE)                                  │
 │  ├─ Has: RPC_URL                                                     │
 │  ├─ Does NOT need: PRIVATE_KEY                                       │
 │  └─ Runs: node broadcast-transaction.js signed-tx.json               │
 │     → Broadcasts transaction to network                              │
-│                                                                        │
+│                                                                      │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
