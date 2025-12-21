@@ -1,0 +1,123 @@
+import { useState, useEffect } from 'react';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther, isAddress, decodeEventLog } from 'viem';
+import contractABI from '../../utils/CryptoHeirABI.json';
+
+/**
+ * Custom hook for handling inheritance deposits
+ * @param {Object} params - Hook parameters
+ * @param {string} params.contractAddress - CryptoHeir contract address
+ * @param {Function} params.onSuccess - Callback when deposit is successful
+ * @returns {Object} Deposit state and handlers
+ */
+export const useInheritanceDeposit = ({ contractAddress, onSuccess }) => {
+  const [inheritanceId, setInheritanceId] = useState(null);
+
+  const {
+    writeContract: writeDeposit,
+    data: depositHash,
+    isPending: isDepositPending,
+    isError: isDepositWriteError,
+    error: depositWriteError
+  } = useWriteContract();
+
+  const {
+    isLoading: isDepositConfirming,
+    isSuccess: isDepositConfirmed,
+    data: depositReceipt
+  } = useWaitForTransactionReceipt({ hash: depositHash });
+
+  const handleDeposit = async ({ beneficiary, amount, days, tokenType, tokenAddress, needsApproval }) => {
+    try {
+      if (!contractAddress) {
+        throw new Error('Contract not initialized');
+      }
+
+      if (!isAddress(beneficiary)) {
+        throw new Error('Invalid beneficiary address');
+      }
+
+      const deadline = Math.floor(Date.now() / 1000) + parseInt(days) * 24 * 60 * 60;
+      const amountWei = parseEther(amount);
+
+      // Determine token address (address(0) for native token)
+      const token = tokenType === 'native' ? '0x0000000000000000000000000000000000000000' : tokenAddress;
+
+      if (tokenType === 'erc20') {
+        if (!isAddress(tokenAddress)) {
+          throw new Error('Invalid token address');
+        }
+
+        if (needsApproval) {
+          throw new Error('Please approve the contract first');
+        }
+
+        // ERC20 token deposit (approval already handled)
+        writeDeposit({
+          address: contractAddress,
+          abi: contractABI,
+          functionName: 'deposit',
+          args: [token, beneficiary, amountWei, BigInt(deadline)],
+        });
+      } else {
+        // Native token deposit
+        writeDeposit({
+          address: contractAddress,
+          abi: contractABI,
+          functionName: 'deposit',
+          args: [token, beneficiary, amountWei, BigInt(deadline)],
+          value: amountWei,
+        });
+      }
+    } catch (err) {
+      console.error('Deposit error:', err);
+      throw err;
+    }
+  };
+
+  // Handle transaction confirmation and event parsing
+  useEffect(() => {
+    if (isDepositConfirmed && depositReceipt) {
+      // Parse InheritanceCreated event from logs
+      let parsedInheritanceId = 'unknown';
+
+      try {
+        for (const log of depositReceipt.logs) {
+          try {
+            const decoded = decodeEventLog({
+              abi: contractABI,
+              data: log.data,
+              topics: log.topics,
+            });
+
+            if (decoded.eventName === 'InheritanceCreated') {
+              parsedInheritanceId = decoded.args.inheritanceId.toString();
+              break;
+            }
+          } catch {
+            // Skip logs that don't match
+            continue;
+          }
+        }
+      } catch (err) {
+        console.error('Error parsing event:', err);
+      }
+
+      setInheritanceId(parsedInheritanceId);
+
+      if (onSuccess) {
+        onSuccess(parsedInheritanceId);
+      }
+    }
+  }, [isDepositConfirmed, depositReceipt, onSuccess]);
+
+  return {
+    handleDeposit,
+    isDepositPending,
+    isDepositConfirming,
+    isDepositConfirmed,
+    isDepositWriteError,
+    depositWriteError,
+    inheritanceId
+  };
+};
