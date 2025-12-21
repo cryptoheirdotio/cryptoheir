@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-import "../src/CryptoHeir.sol";
+import {Test} from "forge-std/Test.sol";
+import {CryptoHeir} from "../src/CryptoHeir.sol";
 
 contract CryptoHeirTest is Test {
     CryptoHeir public cryptoHeir;
