@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAccount, useChainId } from 'wagmi';
 import { Layout } from './components/Layout';
@@ -13,37 +13,39 @@ function App() {
   const { address: account, isConnected } = useAccount();
   const chainId = useChainId();
 
-  const [contractAddress, setContractAddress] = useState('');
-  const [networkInfo, setNetworkInfo] = useState(null);
-  const [networkError, setNetworkError] = useState('');
-
-  // Auto-detect network and set contract address when wallet is connected
-  useEffect(() => {
-    if (isConnected && chainId) {
-      const network = getNetworkByChainId(Number(chainId));
-
-      if (!network) {
-        setNetworkError(`Unsupported network (Chain ID: ${chainId}). Please switch to a supported network.`);
-        setNetworkInfo(null);
-        setContractAddress('');
-        return;
-      }
-
-      if (!network.contractAddress) {
-        setNetworkError(`Contract not deployed on ${network.name}. Please configure the contract address.`);
-        setNetworkInfo(network);
-        setContractAddress('');
-        return;
-      }
-
-      setNetworkError('');
-      setNetworkInfo(network);
-      setContractAddress(network.contractAddress);
-    } else {
-      setNetworkInfo(null);
-      setContractAddress('');
-      setNetworkError('');
+  // Derive network information and contract address from chain ID
+  const { contractAddress, networkInfo, networkError } = useMemo(() => {
+    if (!isConnected || !chainId) {
+      return {
+        contractAddress: '',
+        networkInfo: null,
+        networkError: ''
+      };
     }
+
+    const network = getNetworkByChainId(Number(chainId));
+
+    if (!network) {
+      return {
+        contractAddress: '',
+        networkInfo: null,
+        networkError: `Unsupported network (Chain ID: ${chainId}). Please switch to a supported network.`
+      };
+    }
+
+    if (!network.contractAddress) {
+      return {
+        contractAddress: '',
+        networkInfo: network,
+        networkError: `Contract not deployed on ${network.name}. Please configure the contract address.`
+      };
+    }
+
+    return {
+      contractAddress: network.contractAddress,
+      networkInfo: network,
+      networkError: ''
+    };
   }, [isConnected, chainId]);
 
   return (

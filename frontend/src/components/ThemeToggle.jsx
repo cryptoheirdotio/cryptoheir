@@ -1,21 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const ThemeToggle = () => {
-  const [theme, setTheme] = useState('light');
-
-  useEffect(() => {
-    // Check for saved theme preference or default to 'light'
+  // Initialize theme from localStorage using lazy initialization
+  const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(savedTheme);
+    // Set initial theme on document
     document.documentElement.setAttribute('data-theme', savedTheme);
-
-    // Add or remove dark class for Tailwind dark mode
     if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, []);
+    return savedTheme;
+  });
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';

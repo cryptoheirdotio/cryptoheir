@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { parseEther, isAddress } from 'viem';
 import { ERC20_ABI } from '../../constants/erc20';
@@ -31,7 +31,7 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
   } = useWaitForTransactionReceipt({ hash: approvalHash });
 
   // Check allowance for ERC20 tokens
-  const checkAllowance = async () => {
+  const checkAllowance = useCallback(async () => {
     if (tokenType !== 'erc20' || !tokenAddress || !isAddress(tokenAddress) || !account || !contractAddress || !amount) {
       setNeedsApproval(false);
       return;
@@ -51,7 +51,7 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
       console.error('Error checking allowance:', err);
       setNeedsApproval(true);
     }
-  };
+  }, [tokenType, tokenAddress, amount, account, contractAddress, publicClient]);
 
   // Check allowance when relevant fields change
   useEffect(() => {
@@ -60,14 +60,14 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
     } else {
       setNeedsApproval(false);
     }
-  }, [tokenType, tokenAddress, amount, account, contractAddress]);
+  }, [tokenType, tokenAddress, amount, account, contractAddress, checkAllowance]);
 
   // Re-check allowance after approval is confirmed
   useEffect(() => {
     if (isApprovalConfirmed) {
       checkAllowance();
     }
-  }, [isApprovalConfirmed]);
+  }, [isApprovalConfirmed, checkAllowance]);
 
   const handleApprove = async () => {
     try {
