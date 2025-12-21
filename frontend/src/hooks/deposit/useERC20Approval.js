@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { parseEther, isAddress } from 'viem';
 import { ERC20_ABI } from '../../constants/erc20';
+import { verifyContractExists } from '../../utils/contractVerification';
 
 /**
  * Custom hook for handling ERC20 token approvals
@@ -38,6 +39,13 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
     }
 
     try {
+      // Verify token contract exists before checking allowance
+      const { exists, error } = await verifyContractExists(tokenAddress, publicClient);
+      if (!exists) {
+        console.error('Token contract verification failed:', error);
+        throw new Error(error || 'No contract found at token address');
+      }
+
       const amountWei = parseEther(amount);
       const allowance = await publicClient.readContract({
         address: tokenAddress,
@@ -79,6 +87,12 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
         throw new Error('Contract not initialized');
       }
 
+      // Verify token contract exists before attempting approval
+      const { exists, error } = await verifyContractExists(tokenAddress, publicClient);
+      if (!exists) {
+        throw new Error(error || 'No contract found at token address');
+      }
+
       const amountWei = parseEther(amount);
 
       writeApproval({
@@ -100,7 +114,6 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
     isApprovalConfirming,
     isApprovalConfirmed,
     isApprovalWriteError,
-    approvalWriteError,
-    checkAllowance
+    approvalWriteError
   };
 };
