@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Script.sol";
-import "../src/CryptoHeir.sol";
+import {Script, console} from "forge-std/Script.sol";
+import {CryptoHeir} from "../src/CryptoHeir.sol";
 
 contract DeployScript is Script {
     function run() external {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-import "../src/CryptoHeir.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {CryptoHeir} from "../src/CryptoHeir.sol";
 
 /**
  * @title CryptoHeirInvariantTest
@@ -118,7 +118,11 @@ contract InvariantTestHandler is Test {
 
         // Initialize actors
         for (uint256 i = 0; i < 5; i++) {
+            // casting to 'uint160' is safe because we're using small controlled values for test actors
+            // forge-lint: disable-next-line(unsafe-typecast)
             address depositor = address(uint160(0x1000 + i));
+            // casting to 'uint160' is safe because we're using small controlled values for test actors
+            // forge-lint: disable-next-line(unsafe-typecast)
             address beneficiary = address(uint160(0x2000 + i));
 
             depositors.push(depositor);
