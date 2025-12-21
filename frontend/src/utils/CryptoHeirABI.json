@@ -1,5 +1,17 @@
 [
   {
+    "type": "constructor",
+    "inputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "acceptFeeCollector",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "function",
     "name": "claim",
     "inputs": [
@@ -63,6 +75,19 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "feeCollector",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -167,12 +192,38 @@
   },
   {
     "type": "function",
+    "name": "pendingFeeCollector",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "reclaim",
     "inputs": [
       {
         "name": "_inheritanceId",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transferFeeCollector",
+    "inputs": [
+      {
+        "name": "newFeeCollector",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -199,6 +250,75 @@
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeeCollected",
+    "inputs": [
+      {
+        "name": "collector",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feeType",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeeCollectorTransferStarted",
+    "inputs": [
+      {
+        "name": "currentCollector",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "pendingCollector",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeeCollectorTransferred",
+    "inputs": [
+      {
+        "name": "previousCollector",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newCollector",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -345,7 +465,17 @@
   },
   {
     "type": "error",
+    "name": "InvalidFeeCollector",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidTokenTransfer",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoPendingTransfer",
     "inputs": []
   },
   {
@@ -356,6 +486,11 @@
   {
     "type": "error",
     "name": "OnlyDepositor",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OnlyFeeCollector",
     "inputs": []
   },
   {
