@@ -43,7 +43,6 @@ export const useDepositForm = () => {
 
   return {
     formData,
-    setters,
     updateField,
     resetForm
   };

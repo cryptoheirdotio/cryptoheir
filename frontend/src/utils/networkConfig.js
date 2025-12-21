@@ -24,13 +24,3 @@ export const NETWORKS = {
 export const getNetworkByChainId = (chainId) => {
   return Object.values(NETWORKS).find(network => network.chainId === chainId);
 };
-
-// Get network key by chain ID
-export const getNetworkKeyByChainId = (chainId) => {
-  return Object.keys(NETWORKS).find(key => NETWORKS[key].chainId === chainId);
-};
-
-// Check if contract address is configured for a network
-export const hasContractAddress = (networkKey) => {
-  return NETWORKS[networkKey] && NETWORKS[networkKey].contractAddress !== '';
-};

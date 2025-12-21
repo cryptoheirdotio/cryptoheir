@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { parseEther, isAddress, decodeEventLog } from 'viem';
 import contractABI from '../../utils/CryptoHeirABI.json';
+import { verifyContractExists } from '../../utils/contractVerification';
 
 /**
  * Custom hook for handling inheritance deposits
@@ -11,6 +12,7 @@ import contractABI from '../../utils/CryptoHeirABI.json';
  * @returns {Object} Deposit state and handlers
  */
 export const useInheritanceDeposit = ({ contractAddress, onSuccess }) => {
+  const publicClient = usePublicClient();
   const [inheritanceId, setInheritanceId] = useState(null);
 
   const {
@@ -46,6 +48,12 @@ export const useInheritanceDeposit = ({ contractAddress, onSuccess }) => {
       if (tokenType === 'erc20') {
         if (!isAddress(tokenAddress)) {
           throw new Error('Invalid token address');
+        }
+
+        // Verify token contract exists before deposit
+        const { exists, error } = await verifyContractExists(tokenAddress, publicClient);
+        if (!exists) {
+          throw new Error(error || 'No contract found at token address');
         }
 
         if (needsApproval) {
@@ -115,7 +123,6 @@ export const useInheritanceDeposit = ({ contractAddress, onSuccess }) => {
     handleDeposit,
     isDepositPending,
     isDepositConfirming,
-    isDepositConfirmed,
     isDepositWriteError,
     depositWriteError,
     inheritanceId

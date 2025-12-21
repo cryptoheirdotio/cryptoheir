@@ -483,6 +483,31 @@ async function prepareTransaction() {
     if (parsed.mode === 'call') {
       tx.to = parsed.options.contract;
 
+      // Verify contract exists at the address
+      console.log(`\n✓ Verifying contract at ${parsed.options.contract}...`);
+      const bytecode = await provider.getCode(parsed.options.contract);
+      if (!bytecode || bytecode === '0x') {
+        console.error(`Error: No contract found at address ${parsed.options.contract}`);
+        console.error('Please verify the contract address is correct and the contract is deployed on this network.');
+        process.exit(1);
+      }
+      console.log(`  Contract verified (bytecode size: ${(bytecode.length / 2 - 1)} bytes)`);
+
+      // For ERC20 token deposits, verify token contract exists
+      if (parsed.functionName === 'deposit' && parsed.params.token) {
+        const isNativeToken = parsed.params.token === '0x0000000000000000000000000000000000000000';
+        if (!isNativeToken) {
+          console.log(`\n✓ Verifying ERC20 token contract at ${parsed.params.token}...`);
+          const tokenBytecode = await provider.getCode(parsed.params.token);
+          if (!tokenBytecode || tokenBytecode === '0x') {
+            console.error(`Error: No contract found at token address ${parsed.params.token}`);
+            console.error('Please verify the token address is correct and the token contract is deployed on this network.');
+            process.exit(1);
+          }
+          console.log(`  Token contract verified (bytecode size: ${(tokenBytecode.length / 2 - 1)} bytes)`);
+        }
+      }
+
       // Add value for deposit function
       if (parsed.functionName === 'deposit' && parsed.params.value) {
         tx.value = ethers.parseEther(parsed.params.value);
