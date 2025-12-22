@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { parseEther, isAddress, decodeEventLog } from 'viem';
-import contractABI from '../../utils/CryptoHeirABI.json';
+import { contractABI } from '../../utils/contract';
 import { verifyContractExists } from '../../utils/contractVerification';
 
 /**
