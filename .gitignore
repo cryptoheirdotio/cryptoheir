@@ -1,6 +1,7 @@
 # Compiler files
 foundry/cache/
-foundry/out/
+foundry/out/*
+!foundry/out/CryptoHeir.sol/
 
 # Python virtual environment for Slither
 foundry/slither-env/
