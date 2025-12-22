@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { usePublicClient, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther } from 'viem';
-import contractABI from '../utils/CryptoHeirABI.json';
+import { contractABI } from '../utils/contract';
 
 export const InheritanceManager = ({ account, initialId }) => {
   const { contractAddress } = useOutletContext();

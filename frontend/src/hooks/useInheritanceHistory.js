@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { formatEther, decodeEventLog, parseAbiItem } from 'viem';
-import contractABI from '../utils/CryptoHeirABI.json';
+import { contractABI } from '../utils/contract';
 
 export const useInheritanceHistory = (contractAddress, publicClient, account) => {
   const [deposits, setDeposits] = useState([]);
