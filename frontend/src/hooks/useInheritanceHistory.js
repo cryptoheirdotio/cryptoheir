@@ -21,7 +21,7 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
         // Query all InheritanceCreated events
         const logs = await publicClient.getLogs({
           address: contractAddress,
-          event: parseAbiItem('event InheritanceCreated(uint256 indexed inheritanceId, address indexed depositor, address indexed beneficiary, uint256 amount, uint256 deadline)'),
+          event: parseAbiItem('event InheritanceCreated(uint256 indexed inheritanceId, address indexed depositor, address indexed beneficiary, address token, uint256 amount, uint256 deadline)'),
           fromBlock: 0n,
           toBlock: 'latest'
         });
@@ -74,7 +74,7 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
 
               // Determine status
               let status;
-              if (current[4]) {
+              if (current[5]) {
                 status = 'claimed';
               } else if (deadlineTimestamp <= now) {
                 status = 'expired';
@@ -89,7 +89,7 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
                 amount: formatEther(event.args.amount),
                 deadline: deadlineTimestamp,
                 deadlineFormatted: new Date(deadlineTimestamp * 1000).toLocaleString(),
-                claimed: current[4],
+                claimed: current[5],
                 status,
                 role: isDepositor && isBeneficiary ? 'both' : isDepositor ? 'depositor' : 'beneficiary',
                 transactionHash: event.transactionHash,
