@@ -167,16 +167,19 @@ export const InheritanceManager = ({ account, initialId }) => {
             <input
               id="inheritanceId"
               type="number"
+              min="0"
+              step="1"
               value={inheritanceId}
               onChange={(e) => setInheritanceId(e.target.value)}
-              placeholder="0"
+              placeholder="Enter Inheritance ID"
               className="input input-bordered join-item flex-1 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
               disabled={loading}
             />
             <button
               className="btn btn-primary join-item font-semibold"
-              onClick={loadInheritance}
+              onClick={() => loadInheritance()}
               disabled={loading || !inheritanceId}
+              aria-label={!inheritanceId ? "Enter an Inheritance ID first" : "Load inheritance details"}
             >
               {loadingRead ? (
                 <span className="flex items-center gap-2">
@@ -287,6 +290,8 @@ export const InheritanceManager = ({ account, initialId }) => {
                       <input
                         id="newDays"
                         type="number"
+                        min="1"
+                        step="1"
                         value={newDays}
                         onChange={(e) => setNewDays(e.target.value)}
                         placeholder="30"
