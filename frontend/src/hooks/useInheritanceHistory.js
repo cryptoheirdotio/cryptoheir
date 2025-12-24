@@ -26,6 +26,42 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
           toBlock: 'latest'
         });
 
+        // Query claim and reclaim events to determine final status
+        const claimedLogs = await publicClient.getLogs({
+          address: contractAddress,
+          event: parseAbiItem('event InheritanceClaimed(uint256 indexed inheritanceId, address indexed beneficiary, address token, uint256 amount)'),
+          fromBlock: 0n,
+          toBlock: 'latest'
+        });
+
+        const reclaimedLogs = await publicClient.getLogs({
+          address: contractAddress,
+          event: parseAbiItem('event InheritanceReclaimed(uint256 indexed inheritanceId, address indexed depositor, address token, uint256 amount)'),
+          fromBlock: 0n,
+          toBlock: 'latest'
+        });
+
+        // Build maps for quick lookup
+        const claimedMap = new Map();
+        claimedLogs.forEach(log => {
+          const decoded = decodeEventLog({
+            abi: contractABI,
+            data: log.data,
+            topics: log.topics,
+          });
+          claimedMap.set(decoded.args.inheritanceId.toString(), 'claimed');
+        });
+
+        const reclaimedMap = new Map();
+        reclaimedLogs.forEach(log => {
+          const decoded = decodeEventLog({
+            abi: contractABI,
+            data: log.data,
+            topics: log.topics,
+          });
+          reclaimedMap.set(decoded.args.inheritanceId.toString(), 'reclaimed');
+        });
+
         // Decode and filter events where user is depositor or beneficiary
         const userEvents = logs
           .map(log => {
@@ -56,6 +92,7 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
         const enrichedDeposits = await Promise.all(
           userEvents.map(async (event) => {
             const id = event.args.inheritanceId;
+            const idStr = id.toString();
 
             try {
               const current = await publicClient.readContract({
@@ -72,10 +109,12 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
               const isDepositor = event.args.depositor.toLowerCase() === account.toLowerCase();
               const isBeneficiary = event.args.beneficiary.toLowerCase() === account.toLowerCase();
 
-              // Determine status
+              // Determine status by checking event logs
               let status;
-              if (current[5]) {
+              if (claimedMap.has(idStr)) {
                 status = 'claimed';
+              } else if (reclaimedMap.has(idStr)) {
+                status = 'reclaimed';
               } else if (deadlineTimestamp <= now) {
                 status = 'expired';
               } else {
@@ -83,7 +122,7 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
               }
 
               return {
-                id: id.toString(),
+                id: idStr,
                 depositor: event.args.depositor,
                 beneficiary: event.args.beneficiary,
                 amount: formatEther(event.args.amount),
