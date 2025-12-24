@@ -36,6 +36,11 @@ export const InheritanceManager = ({ account, initialId }) => {
         args: [BigInt(id)],
       });
 
+      // Check if inheritance exists (depositor would be address(0) if it doesn't exist)
+      if (data[0] === '0x0000000000000000000000000000000000000000') {
+        throw new Error(`Inheritance ID ${id} does not exist`);
+      }
+
       const tokenAddr = data[2];
       const isNativeToken = tokenAddr === '0x0000000000000000000000000000000000000000';
 
