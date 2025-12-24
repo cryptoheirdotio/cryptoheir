@@ -79,7 +79,109 @@ export function Navigation({ isConnected }) {
 
         <div className="navbar-end gap-2">
           <ThemeToggle />
-          <ConnectButton />
+          <ConnectButton.Custom>
+            {({
+              account,
+              chain,
+              openAccountModal,
+              openChainModal,
+              openConnectModal,
+              mounted,
+            }) => {
+              const ready = mounted;
+              const connected = ready && account && chain;
+
+              return (
+                <div
+                  {...(!ready && {
+                    'aria-hidden': true,
+                    style: {
+                      opacity: 0,
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    },
+                  })}
+                >
+                  {(() => {
+                    if (!connected) {
+                      return (
+                        <button onClick={openConnectModal} className="btn btn-primary btn-sm">
+                          Connect Wallet
+                        </button>
+                      );
+                    }
+
+                    if (chain.unsupported) {
+                      return (
+                        <button onClick={openChainModal} className="btn btn-error btn-sm">
+                          Wrong network
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={openChainModal}
+                          className="btn btn-sm btn-ghost gap-1.5 min-h-0 h-9 px-2.5"
+                          type="button"
+                        >
+                          {chain.hasIcon && (
+                            <div
+                              className="w-4 h-4"
+                              style={{
+                                background: chain.iconBackground,
+                                borderRadius: 999,
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {chain.iconUrl && (
+                                <img
+                                  alt={chain.name ?? 'Chain icon'}
+                                  src={chain.iconUrl}
+                                  className="w-4 h-4"
+                                />
+                              )}
+                            </div>
+                          )}
+                          <span className="text-xs font-medium">{chain.name}</span>
+                        </button>
+
+                        <button
+                          onClick={openAccountModal}
+                          className="btn btn-sm btn-ghost gap-1.5 min-h-0 h-9 px-2.5"
+                          type="button"
+                        >
+                          <span className="text-xs font-medium">
+                            {account.displayBalance
+                              ? ` ${account.displayBalance}`
+                              : ''}
+                          </span>
+                          <span className="text-xs font-medium">{account.displayName}</span>
+                          <svg
+                            width="10"
+                            height="6"
+                            viewBox="0 0 10 6"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="opacity-70 flex-shrink-0"
+                          >
+                            <path
+                              d="M1 1L5 5L9 1"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            }}
+          </ConnectButton.Custom>
         </div>
       </div>
     </div>
