@@ -75,6 +75,8 @@ export function History() {
         return 'badge-success';
       case 'claimed':
         return 'badge-info';
+      case 'reclaimed':
+        return 'badge-secondary';
       case 'expired':
         return 'badge-warning';
       default:
@@ -142,6 +144,7 @@ export function History() {
                 <option value="all">All</option>
                 <option value="active">Active</option>
                 <option value="claimed">Claimed</option>
+                <option value="reclaimed">Reclaimed</option>
                 <option value="expired">Expired</option>
               </select>
             </div>

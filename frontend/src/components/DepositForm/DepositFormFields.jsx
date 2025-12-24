@@ -39,6 +39,7 @@ export const DepositFormFields = ({ beneficiary, amount, days, onChange, disable
         <input
           id="days"
           type="number"
+          min="1"
           value={days}
           onChange={(e) => onChange('days', e.target.value)}
           placeholder="30"

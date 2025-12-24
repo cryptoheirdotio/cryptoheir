@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { usePublicClient, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, parseAbiItem, decodeEventLog } from 'viem';
 import { contractABI } from '../utils/contract';
 
 export const InheritanceManager = ({ account, initialId }) => {
@@ -39,6 +39,60 @@ export const InheritanceManager = ({ account, initialId }) => {
       const tokenAddr = data[2];
       const isNativeToken = tokenAddr === '0x0000000000000000000000000000000000000000';
 
+      // Check if this inheritance was claimed or reclaimed
+      let claimStatus = 'active';
+      if (data[5]) {
+        // Check for InheritanceClaimed event
+        const claimedLogs = await publicClient.getLogs({
+          address: contractAddress,
+          event: parseAbiItem('event InheritanceClaimed(uint256 indexed inheritanceId, address indexed beneficiary, address token, uint256 amount)'),
+          fromBlock: 0n,
+          toBlock: 'latest'
+        });
+
+        const wasClaimed = claimedLogs.some(log => {
+          try {
+            const decoded = decodeEventLog({
+              abi: contractABI,
+              data: log.data,
+              topics: log.topics,
+            });
+            return decoded.args.inheritanceId.toString() === id;
+          } catch {
+            return false;
+          }
+        });
+
+        if (wasClaimed) {
+          claimStatus = 'claimed';
+        } else {
+          // Check for InheritanceReclaimed event
+          const reclaimedLogs = await publicClient.getLogs({
+            address: contractAddress,
+            event: parseAbiItem('event InheritanceReclaimed(uint256 indexed inheritanceId, address indexed depositor, address token, uint256 amount)'),
+            fromBlock: 0n,
+            toBlock: 'latest'
+          });
+
+          const wasReclaimed = reclaimedLogs.some(log => {
+            try {
+              const decoded = decodeEventLog({
+                abi: contractABI,
+                data: log.data,
+                topics: log.topics,
+              });
+              return decoded.args.inheritanceId.toString() === id;
+            } catch {
+              return false;
+            }
+          });
+
+          if (wasReclaimed) {
+            claimStatus = 'reclaimed';
+          }
+        }
+      }
+
       setInheritanceData({
         depositor: data[0],
         beneficiary: data[1],
@@ -49,6 +103,7 @@ export const InheritanceManager = ({ account, initialId }) => {
         deadline: new Date(Number(data[4]) * 1000).toLocaleString(),
         deadlineTimestamp: Number(data[4]),
         claimed: data[5],
+        claimStatus,
       });
     } catch (err) {
       console.error('Load error:', err);
@@ -230,8 +285,14 @@ export const InheritanceManager = ({ account, initialId }) => {
               <div className="stat">
                 <div className="stat-title font-semibold">Status</div>
                 <div className="stat-value text-2xl">
-                  <span className={`badge ${inheritanceData.claimed ? 'badge-error' : 'badge-success'} badge-lg font-semibold shadow-smooth`}>
-                    {inheritanceData.claimed ? 'Claimed' : 'Active'}
+                  <span className={`badge ${
+                    inheritanceData.claimStatus === 'claimed' ? 'badge-info' :
+                    inheritanceData.claimStatus === 'reclaimed' ? 'badge-secondary' :
+                    'badge-success'
+                  } badge-lg font-semibold shadow-smooth`}>
+                    {inheritanceData.claimStatus === 'claimed' ? 'Claimed' :
+                     inheritanceData.claimStatus === 'reclaimed' ? 'Reclaimed' :
+                     'Active'}
                   </span>
                 </div>
               </div>
