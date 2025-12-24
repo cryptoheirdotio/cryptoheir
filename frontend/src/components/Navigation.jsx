@@ -123,7 +123,7 @@ export function Navigation({ isConnected }) {
                       <div className="flex gap-1.5">
                         <button
                           onClick={openChainModal}
-                          className="btn btn-sm btn-ghost gap-1.5 min-h-0 h-9 px-2.5"
+                          className="btn btn-sm btn-outline gap-1.5 min-h-0 h-9 px-2.5"
                           type="button"
                         >
                           {chain.hasIcon && (
@@ -149,7 +149,7 @@ export function Navigation({ isConnected }) {
 
                         <button
                           onClick={openAccountModal}
-                          className="btn btn-sm btn-ghost gap-1.5 min-h-0 h-9 px-2.5"
+                          className="btn btn-sm btn-outline gap-1.5 min-h-0 h-9 px-2.5"
                           type="button"
                         >
                           <span className="text-xs font-medium">
