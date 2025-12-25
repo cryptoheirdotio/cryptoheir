@@ -1,17 +1,38 @@
-import { useChainId, useChains } from 'wagmi';
+import { useChainId, useChains, usePublicClient } from 'wagmi';
 import { getTokensForNetwork } from '../../constants/tokenLists';
+import { verifyContractExists } from '../../utils/contractVerification';
 
-export const TokenTypeSelector = ({ tokenType, tokenAddress, onChange, disabled }) => {
+export const TokenTypeSelector = ({ tokenType, tokenAddress, onChange, disabled, setManualError }) => {
   const chainId = useChainId();
   const chains = useChains();
+  const publicClient = usePublicClient();
   const availableTokens = getTokensForNetwork(chainId);
 
   // Get current chain's native currency symbol
   const currentChain = chains.find(chain => chain.id === chainId);
   const nativeCurrencySymbol = currentChain?.nativeCurrency?.symbol || 'ETH';
 
-  const handleTokenSelect = (e) => {
+  const handleTokenSelect = async (e) => {
     const selectedAddress = e.target.value;
+
+    // If empty selection (default "Choose a token..."), just update and return
+    if (!selectedAddress) {
+      onChange('tokenAddress', selectedAddress);
+      setManualError('');
+      return;
+    }
+
+    // Verify contract exists at the selected token address
+    const { exists, error } = await verifyContractExists(selectedAddress, publicClient);
+
+    if (!exists) {
+      setManualError(error || 'No contract found at token address');
+      // Don't update the tokenAddress if validation fails
+      return;
+    }
+
+    // Clear any previous errors and update the token address
+    setManualError('');
     onChange('tokenAddress', selectedAddress);
   };
 
