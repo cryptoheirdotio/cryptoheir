@@ -121,6 +121,9 @@ export const DepositForm = ({ account }) => {
             days={days}
             onChange={updateField}
             disabled={loading}
+            tokenType={tokenType}
+            tokenAddress={tokenAddress}
+            account={account}
           />
           <DepositButton
             tokenType={tokenType}
