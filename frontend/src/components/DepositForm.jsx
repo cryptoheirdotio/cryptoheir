@@ -113,6 +113,7 @@ export const DepositForm = ({ account }) => {
             tokenAddress={tokenAddress}
             onChange={updateField}
             disabled={loading}
+            setManualError={setManualError}
           />
           <DepositFormFields
             beneficiary={beneficiary}
