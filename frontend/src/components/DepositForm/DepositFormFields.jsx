@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useChainId, useChains } from 'wagmi';
 import { useTokenBalance } from '../../hooks/deposit/useTokenBalance';
 import { getTokenByAddress } from '../../constants/tokenLists';
+import { QRScannerModal } from './QRScannerModal';
 
 export const DepositFormFields = ({ beneficiary, amount, days, onChange, disabled, tokenType, tokenAddress, account }) => {
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const chainId = useChainId();
   const chains = useChains();
 
@@ -37,22 +39,41 @@ export const DepositFormFields = ({ beneficiary, amount, days, onChange, disable
     }
   };
 
+  // Handle QR code scanned
+  const handleQRScanned = (address) => {
+    onChange('beneficiary', address);
+    setIsQRModalOpen(false);
+  };
+
   return (
     <>
       <div className="form-control">
         <label className="label" htmlFor="beneficiary">
           <span className="label-text font-semibold text-base">Beneficiary Address:</span>
         </label>
-        <input
-          id="beneficiary"
-          type="text"
-          value={beneficiary}
-          onChange={(e) => onChange('beneficiary', e.target.value)}
-          placeholder="0x..."
-          className="input input-bordered w-full focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-          required
-          disabled={disabled}
-        />
+        <div className="relative">
+          <input
+            id="beneficiary"
+            type="text"
+            value={beneficiary}
+            onChange={(e) => onChange('beneficiary', e.target.value)}
+            placeholder="0x..."
+            className="input input-bordered w-full focus:ring-2 focus:ring-primary focus:outline-none transition-all pr-16"
+            required
+            disabled={disabled}
+          />
+          <button
+            type="button"
+            onClick={() => setIsQRModalOpen(true)}
+            disabled={disabled}
+            className="btn btn-sm btn-ghost absolute right-2 top-1/2 transform -translate-y-1/2 h-8 min-h-8"
+            title="Scan QR Code"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className="form-control">
         <label className="label" htmlFor="amount">
@@ -107,6 +128,11 @@ export const DepositFormFields = ({ beneficiary, amount, days, onChange, disable
           disabled={disabled}
         />
       </div>
+      <QRScannerModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        onAddressScanned={handleQRScanned}
+      />
     </>
   );
 };
