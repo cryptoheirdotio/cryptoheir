@@ -22,7 +22,8 @@ export const useInheritanceDeposit = ({ contractAddress, account, onSuccess }) =
     data: depositHash,
     isPending: isDepositPending,
     isError: isDepositWriteError,
-    error: depositWriteError
+    error: depositWriteError,
+    reset: resetDeposit
   } = useWriteContract();
 
   const {
@@ -158,6 +159,7 @@ export const useInheritanceDeposit = ({ contractAddress, account, onSuccess }) =
     isDepositConfirming,
     isDepositWriteError,
     depositWriteError,
-    inheritanceId
+    inheritanceId,
+    resetDeposit
   };
 };

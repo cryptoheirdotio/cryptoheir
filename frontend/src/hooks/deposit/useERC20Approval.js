@@ -24,7 +24,8 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
     data: approvalHash,
     isPending: isApprovalPending,
     isError: isApprovalWriteError,
-    error: approvalWriteError
+    error: approvalWriteError,
+    reset: resetApproval
   } = useWriteContract();
 
   const {
@@ -131,6 +132,7 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
     isApprovalConfirming,
     isApprovalConfirmed,
     isApprovalWriteError,
-    approvalWriteError
+    approvalWriteError,
+    resetApproval
   };
 };
