@@ -7,6 +7,7 @@ import { TokenTypeSelector } from './DepositForm/TokenTypeSelector';
 import { DepositFormFields } from './DepositForm/DepositFormFields';
 import { DepositButton } from './DepositForm/DepositButton';
 import { AlertMessages } from './DepositForm/AlertMessages';
+import { parseContractError } from '../utils/contractErrors';
 
 export const DepositForm = ({ account }) => {
   const { contractAddress } = useOutletContext();
@@ -43,6 +44,7 @@ export const DepositForm = ({ account }) => {
     depositWriteError
   } = useInheritanceDeposit({
     contractAddress,
+    account,
     onSuccess: (id) => {
       setManualSuccess(`Successfully deposited! Inheritance ID: ${id}`);
       resetForm();
@@ -55,10 +57,10 @@ export const DepositForm = ({ account }) => {
   const error = useMemo(() => {
     if (manualError) return manualError;
     if (isDepositWriteError && depositWriteError) {
-      return depositWriteError.message || 'Failed to deposit';
+      return parseContractError(depositWriteError, 'Failed to deposit');
     }
     if (isApprovalWriteError && approvalWriteError) {
-      return approvalWriteError.message || 'Failed to approve';
+      return parseContractError(approvalWriteError, 'Failed to approve');
     }
     return '';
   }, [manualError, isDepositWriteError, depositWriteError, isApprovalWriteError, approvalWriteError]);

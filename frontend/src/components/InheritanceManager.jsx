@@ -3,11 +3,12 @@ import { useOutletContext } from 'react-router-dom';
 import { usePublicClient, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, parseAbiItem, decodeEventLog } from 'viem';
 import { contractABI } from '../utils/contract';
+import { parseContractError } from '../utils/contractErrors';
 
 export const InheritanceManager = ({ account, initialId }) => {
   const { contractAddress } = useOutletContext();
   const publicClient = usePublicClient();
-  const { writeContract, data: hash, isPending } = useWriteContract();
+  const { writeContract, data: hash, isPending, isError: isWriteError, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
   const [inheritanceId, setInheritanceId] = useState(initialId || '');
   const [inheritanceData, setInheritanceData] = useState(null);
@@ -127,6 +128,22 @@ export const InheritanceManager = ({ account, initialId }) => {
     setLastAction('claim');
 
     try {
+      // Simulate claim before sending transaction
+      try {
+        await publicClient.simulateContract({
+          account: account,
+          address: contractAddress,
+          abi: contractABI,
+          functionName: 'claim',
+          args: [BigInt(inheritanceId)],
+        });
+      } catch (simulationError) {
+        console.error('Claim simulation failed:', simulationError);
+        const parsedError = parseContractError(simulationError, 'Claim would fail');
+        throw new Error(parsedError);
+      }
+
+      // If simulation passed, proceed with actual claim
       writeContract({
         address: contractAddress,
         abi: contractABI,
@@ -145,6 +162,22 @@ export const InheritanceManager = ({ account, initialId }) => {
     setLastAction('reclaim');
 
     try {
+      // Simulate reclaim before sending transaction
+      try {
+        await publicClient.simulateContract({
+          account: account,
+          address: contractAddress,
+          abi: contractABI,
+          functionName: 'reclaim',
+          args: [BigInt(inheritanceId)],
+        });
+      } catch (simulationError) {
+        console.error('Reclaim simulation failed:', simulationError);
+        const parsedError = parseContractError(simulationError, 'Reclaim would fail');
+        throw new Error(parsedError);
+      }
+
+      // If simulation passed, proceed with actual reclaim
       writeContract({
         address: contractAddress,
         abi: contractABI,
@@ -164,6 +197,23 @@ export const InheritanceManager = ({ account, initialId }) => {
 
     try {
       const newDeadline = Math.floor(Date.now() / 1000) + parseInt(newDays) * 24 * 60 * 60;
+
+      // Simulate extend before sending transaction
+      try {
+        await publicClient.simulateContract({
+          account: account,
+          address: contractAddress,
+          abi: contractABI,
+          functionName: 'extendDeadline',
+          args: [BigInt(inheritanceId), BigInt(newDeadline)],
+        });
+      } catch (simulationError) {
+        console.error('Extend simulation failed:', simulationError);
+        const parsedError = parseContractError(simulationError, 'Extend deadline would fail');
+        throw new Error(parsedError);
+      }
+
+      // If simulation passed, proceed with actual extend
       writeContract({
         address: contractAddress,
         abi: contractABI,
@@ -190,6 +240,14 @@ export const InheritanceManager = ({ account, initialId }) => {
       setLastAction('');
     }
   }, [isConfirmed, lastAction]);
+
+  // Handle post-revert write errors (fallback if simulation is bypassed)
+  useEffect(() => {
+    if (isWriteError && writeError) {
+      const parsedError = parseContractError(writeError, `Failed to ${lastAction || 'execute transaction'}`);
+      setError(parsedError);
+    }
+  }, [isWriteError, writeError, lastAction]);
 
   const canClaim = inheritanceData &&
     !inheritanceData.claimed &&

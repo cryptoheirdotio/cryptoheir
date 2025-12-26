@@ -3,6 +3,7 @@ import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 
 import { parseEther, isAddress } from 'viem';
 import { ERC20_ABI } from '../../constants/erc20';
 import { verifyContractExists } from '../../utils/contractVerification';
+import { parseContractError } from '../../utils/contractErrors';
 
 /**
  * Custom hook for handling ERC20 token approvals
@@ -95,6 +96,22 @@ export const useERC20Approval = ({ tokenType, tokenAddress, amount, account, con
 
       const amountWei = parseEther(amount);
 
+      // Simulate approval before sending transaction
+      try {
+        await publicClient.simulateContract({
+          account: account,
+          address: tokenAddress,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [contractAddress, amountWei],
+        });
+      } catch (simulationError) {
+        console.error('Approval simulation failed:', simulationError);
+        const parsedError = parseContractError(simulationError, 'Approval would fail');
+        throw new Error(parsedError);
+      }
+
+      // If simulation passed, proceed with actual approval
       writeApproval({
         address: tokenAddress,
         abi: ERC20_ABI,

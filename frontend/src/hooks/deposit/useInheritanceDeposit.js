@@ -3,15 +3,17 @@ import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 
 import { parseEther, isAddress, decodeEventLog } from 'viem';
 import { contractABI } from '../../utils/contract';
 import { verifyContractExists } from '../../utils/contractVerification';
+import { parseContractError } from '../../utils/contractErrors';
 
 /**
  * Custom hook for handling inheritance deposits
  * @param {Object} params - Hook parameters
  * @param {string} params.contractAddress - CryptoHeir contract address
+ * @param {string} params.account - User's wallet address
  * @param {Function} params.onSuccess - Callback when deposit is successful
  * @returns {Object} Deposit state and handlers
  */
-export const useInheritanceDeposit = ({ contractAddress, onSuccess }) => {
+export const useInheritanceDeposit = ({ contractAddress, account, onSuccess }) => {
   const publicClient = usePublicClient();
   const [inheritanceId, setInheritanceId] = useState(null);
 
@@ -60,7 +62,22 @@ export const useInheritanceDeposit = ({ contractAddress, onSuccess }) => {
           throw new Error('Please approve the contract first');
         }
 
-        // ERC20 token deposit (approval already handled)
+        // Simulate ERC20 token deposit before sending transaction
+        try {
+          await publicClient.simulateContract({
+            account: account,
+            address: contractAddress,
+            abi: contractABI,
+            functionName: 'deposit',
+            args: [token, beneficiary, amountWei, BigInt(deadline)],
+          });
+        } catch (simulationError) {
+          console.error('Deposit simulation failed:', simulationError);
+          const parsedError = parseContractError(simulationError, 'Deposit would fail');
+          throw new Error(parsedError);
+        }
+
+        // If simulation passed, proceed with actual deposit
         writeDeposit({
           address: contractAddress,
           abi: contractABI,
@@ -68,7 +85,23 @@ export const useInheritanceDeposit = ({ contractAddress, onSuccess }) => {
           args: [token, beneficiary, amountWei, BigInt(deadline)],
         });
       } else {
-        // Native token deposit
+        // Simulate native token deposit before sending transaction
+        try {
+          await publicClient.simulateContract({
+            account: account,
+            address: contractAddress,
+            abi: contractABI,
+            functionName: 'deposit',
+            args: [token, beneficiary, amountWei, BigInt(deadline)],
+            value: amountWei,
+          });
+        } catch (simulationError) {
+          console.error('Deposit simulation failed:', simulationError);
+          const parsedError = parseContractError(simulationError, 'Deposit would fail');
+          throw new Error(parsedError);
+        }
+
+        // If simulation passed, proceed with actual deposit
         writeDeposit({
           address: contractAddress,
           abi: contractABI,
