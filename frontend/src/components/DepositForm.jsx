@@ -18,6 +18,15 @@ export const DepositForm = ({ account }) => {
   const { formData, updateField, resetForm } = useDepositForm();
   const { beneficiary, amount, days, tokenType, tokenAddress } = formData;
 
+  // Wrapper for updateField that also clears errors
+  const handleFieldChange = (field, value) => {
+    updateField(field, value);
+    setManualError('');
+    setManualSuccess('');
+    resetDeposit();
+    resetApproval();
+  };
+
   // ERC20 approval handling
   const {
     needsApproval,
@@ -26,7 +35,8 @@ export const DepositForm = ({ account }) => {
     isApprovalConfirming,
     isApprovalConfirmed,
     isApprovalWriteError,
-    approvalWriteError
+    approvalWriteError,
+    resetApproval
   } = useERC20Approval({
     tokenType,
     tokenAddress,
@@ -41,7 +51,8 @@ export const DepositForm = ({ account }) => {
     isDepositPending,
     isDepositConfirming,
     isDepositWriteError,
-    depositWriteError
+    depositWriteError,
+    resetDeposit
   } = useInheritanceDeposit({
     contractAddress,
     account,
@@ -113,7 +124,7 @@ export const DepositForm = ({ account }) => {
           <TokenTypeSelector
             tokenType={tokenType}
             tokenAddress={tokenAddress}
-            onChange={updateField}
+            onChange={handleFieldChange}
             disabled={loading}
             setManualError={setManualError}
           />
@@ -121,7 +132,7 @@ export const DepositForm = ({ account }) => {
             beneficiary={beneficiary}
             amount={amount}
             days={days}
-            onChange={updateField}
+            onChange={handleFieldChange}
             disabled={loading}
             tokenType={tokenType}
             tokenAddress={tokenAddress}
