@@ -33,3 +33,6 @@ build/
 
 # OS
 .DS_Store
+
+# cryptoheir-rs
+/cryptoheir-rs/target
