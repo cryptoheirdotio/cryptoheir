@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Ethereum libraries (alloy)
-alloy = { version = "0.8", features = ["full", "node-bindings", "rpc-types-eth", "signer-local"] }
+alloy = { version = "0.8", features = ["full", "node-bindings", "rpc-types-eth", "signer-local", "sol-types", "rlp"] }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env", "wrap_help"] }

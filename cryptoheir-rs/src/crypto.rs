@@ -1,18 +1,18 @@
 //! Cryptographic operations for signing transactions
 
 use crate::{
-    types::{Metadata, SignedTx, TransactionData, TransactionMode, TxParams},
+    types::{SignedTx, TransactionData, TransactionMode, TxParams},
     Result,
 };
 use alloy::{
-    consensus::{SignableTransaction, TxEip1559, TxLegacy},
-    network::{TxSignerSync},
-    primitives::{Address, Bytes, PrimitiveSignature, TxKind, U256},
-    signers::{local::PrivateKeySigner, Signature},
+    consensus::{SignableTransaction, TxEip1559, TxLegacy, TxEnvelope},
+    eips::eip2718::Encodable2718,
+    primitives::{Bytes, TxKind, U256},
+    signers::{local::PrivateKeySigner, Signer},
 };
 
 /// Sign a transaction with a private key
-pub fn sign_transaction(tx_params: &TxParams, private_key: &str) -> Result<SignedTx> {
+pub async fn sign_transaction(tx_params: &TxParams, private_key: &str) -> Result<SignedTx> {
     // Parse private key
     let signer: PrivateKeySigner = private_key.parse()?;
 
@@ -28,8 +28,8 @@ pub fn sign_transaction(tx_params: &TxParams, private_key: &str) -> Result<Signe
 
     // Create and sign the transaction based on type
     let (signed_tx_bytes, tx_hash) = match tx_params.transaction.tx_type {
-        2 => sign_eip1559(&tx_params.transaction, &signer)?,
-        0 => sign_legacy(&tx_params.transaction, &signer)?,
+        2 => sign_eip1559(&tx_params.transaction, &signer).await?,
+        0 => sign_legacy(&tx_params.transaction, &signer).await?,
         _ => {
             return Err(eyre::eyre!(
                 "Unsupported transaction type: {}",
@@ -61,7 +61,7 @@ pub fn sign_transaction(tx_params: &TxParams, private_key: &str) -> Result<Signe
 }
 
 /// Sign an EIP-1559 (Type 2) transaction
-fn sign_eip1559(
+async fn sign_eip1559(
     tx_data: &TransactionData,
     signer: &PrivateKeySigner,
 ) -> Result<(Bytes, alloy::primitives::TxHash)> {
@@ -84,21 +84,25 @@ fn sign_eip1559(
         access_list: Default::default(),
     };
 
-    // Sign the transaction
-    let signature = signer.sign_transaction_sync(&mut tx.clone().into())?;
-
-    // Get the transaction hash
+    // Get the signature hash
     let tx_hash = tx.signature_hash();
 
-    // Encode the signed transaction
+    // Sign the hash with the private key
+    let sig_hash = tx.signature_hash();
+    let signature = signer.sign_hash(&sig_hash).await?;
+
+    // Create signed transaction and wrap in TxEnvelope
     let signed_tx = tx.into_signed(signature);
-    let encoded = alloy::rlp::encode(&signed_tx);
+    let envelope = TxEnvelope::Eip1559(signed_tx);
+
+    // Encode using alloy's encoding
+    let encoded = envelope.encoded_2718();
 
     Ok((encoded.into(), tx_hash))
 }
 
 /// Sign a legacy (Type 0) transaction
-fn sign_legacy(
+async fn sign_legacy(
     tx_data: &TransactionData,
     signer: &PrivateKeySigner,
 ) -> Result<(Bytes, alloy::primitives::TxHash)> {
@@ -116,15 +120,19 @@ fn sign_legacy(
         input: tx_data.data.clone(),
     };
 
-    // Sign the transaction
-    let signature = signer.sign_transaction_sync(&mut tx.clone().into())?;
-
-    // Get the transaction hash
+    // Get the signature hash
     let tx_hash = tx.signature_hash();
 
-    // Encode the signed transaction
+    // Sign the hash with the private key
+    let sig_hash = tx.signature_hash();
+    let signature = signer.sign_hash(&sig_hash).await?;
+
+    // Create signed transaction and wrap in TxEnvelope
     let signed_tx = tx.into_signed(signature);
-    let encoded = alloy::rlp::encode(&signed_tx);
+    let envelope = TxEnvelope::Legacy(signed_tx);
+
+    // Encode using alloy's encoding
+    let encoded = envelope.encoded_2718();
 
     Ok((encoded.into(), tx_hash))
 }

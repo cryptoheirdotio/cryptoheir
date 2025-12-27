@@ -3,7 +3,10 @@
 use crate::{contract, network, qr, types::*, Result};
 use alloy::primitives::{Address, U256};
 use clap::Subcommand;
-use tracing::{info, warn};
+use tracing::info;
+
+// Type alias for the RPC client type
+type RpcClient = alloy::providers::RootProvider<alloy::transports::http::Http<alloy::transports::http::Client>>;
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Operation {
@@ -271,7 +274,7 @@ pub async fn execute(
 }
 
 async fn prepare_deploy(
-    client: &impl alloy::providers::Provider,
+    client: &RpcClient,
     from: Address,
     nonce: u64,
     chain_id: u64,
@@ -332,7 +335,7 @@ async fn prepare_deploy(
 }
 
 async fn prepare_deposit(
-    client: &impl alloy::providers::Provider,
+    client: &RpcClient,
     from: Address,
     nonce: u64,
     chain_id: u64,
@@ -409,13 +412,13 @@ async fn prepare_deposit(
 
 // Stub implementations for other operations
 async fn prepare_claim(
-    client: &impl alloy::providers::Provider,
-    from: Address,
-    nonce: u64,
-    chain_id: u64,
-    network_name: &str,
-    contract: Address,
-    id: U256,
+    _client: &RpcClient,
+    _from: Address,
+    _nonce: u64,
+    _chain_id: u64,
+    _network_name: &str,
+    _contract: Address,
+    _id: U256,
 ) -> Result<TxParams> {
     info!("Preparing claim transaction...");
     // TODO: Implement claim encoding
@@ -423,13 +426,13 @@ async fn prepare_claim(
 }
 
 async fn prepare_reclaim(
-    client: &impl alloy::providers::Provider,
-    from: Address,
-    nonce: u64,
-    chain_id: u64,
-    network_name: &str,
-    contract: Address,
-    id: U256,
+    _client: &RpcClient,
+    _from: Address,
+    _nonce: u64,
+    _chain_id: u64,
+    _network_name: &str,
+    _contract: Address,
+    _id: U256,
 ) -> Result<TxParams> {
     info!("Preparing reclaim transaction...");
     // TODO: Implement reclaim encoding
@@ -437,14 +440,14 @@ async fn prepare_reclaim(
 }
 
 async fn prepare_extend_deadline(
-    client: &impl alloy::providers::Provider,
-    from: Address,
-    nonce: u64,
-    chain_id: u64,
-    network_name: &str,
-    contract: Address,
-    id: U256,
-    new_deadline: u64,
+    _client: &RpcClient,
+    _from: Address,
+    _nonce: u64,
+    _chain_id: u64,
+    _network_name: &str,
+    _contract: Address,
+    _id: U256,
+    _new_deadline: u64,
 ) -> Result<TxParams> {
     info!("Preparing extend deadline transaction...");
     // TODO: Implement extend_deadline encoding
@@ -452,13 +455,13 @@ async fn prepare_extend_deadline(
 }
 
 async fn prepare_transfer_fee_collector(
-    client: &impl alloy::providers::Provider,
-    from: Address,
-    nonce: u64,
-    chain_id: u64,
-    network_name: &str,
-    contract: Address,
-    new_collector: Address,
+    _client: &RpcClient,
+    _from: Address,
+    _nonce: u64,
+    _chain_id: u64,
+    _network_name: &str,
+    _contract: Address,
+    _new_collector: Address,
 ) -> Result<TxParams> {
     info!("Preparing transfer fee collector transaction...");
     // TODO: Implement transfer_fee_collector encoding
@@ -466,12 +469,12 @@ async fn prepare_transfer_fee_collector(
 }
 
 async fn prepare_accept_fee_collector(
-    client: &impl alloy::providers::Provider,
-    from: Address,
-    nonce: u64,
-    chain_id: u64,
-    network_name: &str,
-    contract: Address,
+    _client: &RpcClient,
+    _from: Address,
+    _nonce: u64,
+    _chain_id: u64,
+    _network_name: &str,
+    _contract: Address,
 ) -> Result<TxParams> {
     info!("Preparing accept fee collector transaction...");
     // TODO: Implement accept_fee_collector encoding
