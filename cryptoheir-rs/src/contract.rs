@@ -4,6 +4,7 @@ use crate::Result;
 use alloy::{
     primitives::{Address, Bytes, U256},
     sol,
+    sol_types::SolCall,
 };
 
 // Define the contract ABI using alloy's sol! macro

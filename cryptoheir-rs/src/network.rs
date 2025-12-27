@@ -2,7 +2,6 @@
 
 use crate::{types::TxReceipt, Result};
 use alloy::{
-    network::{Ethereum, EthereumWallet},
     primitives::{Address, Bytes, TxHash, U256},
     providers::{Provider, ProviderBuilder, RootProvider},
     rpc::types::TransactionReceipt,
@@ -53,26 +52,27 @@ pub async fn create_client(rpc_url: &str) -> Result<RootProvider<Http<Client>>> 
 }
 
 /// Get chain ID
-pub async fn get_chain_id(client: &impl Provider) -> Result<u64> {
+pub async fn get_chain_id(client: &RootProvider<Http<Client>>) -> Result<u64> {
     Ok(client.get_chain_id().await?)
 }
 
 /// Get nonce for an address
-pub async fn get_nonce(client: &impl Provider, address: Address) -> Result<u64> {
+pub async fn get_nonce(client: &RootProvider<Http<Client>>, address: Address) -> Result<u64> {
     Ok(client.get_transaction_count(address).await?)
 }
 
 /// Get gas prices (returns EIP-1559 or legacy)
 pub async fn get_gas_prices(
-    client: &impl Provider,
+    client: &RootProvider<Http<Client>>,
 ) -> Result<(Option<U256>, Option<U256>, Option<U256>)> {
     // Try to get EIP-1559 fee estimates first
     match client.get_fee_history(10, Default::default(), &[]).await {
         Ok(fee_history) => {
             // Get latest base fee
-            let base_fee = fee_history
+            let base_fee_u128 = fee_history
                 .latest_block_base_fee()
-                .unwrap_or(U256::from(1_000_000_000u64)); // 1 gwei default
+                .unwrap_or(1_000_000_000u128); // 1 gwei default
+            let base_fee = U256::from(base_fee_u128);
 
             // Set priority fee (tip)
             let max_priority_fee_per_gas = U256::from(1_500_000_000u64); // 1.5 gwei
@@ -94,7 +94,8 @@ pub async fn get_gas_prices(
         }
         Err(_) => {
             // Fallback to legacy gas price
-            let gas_price = client.get_gas_price().await?;
+            let gas_price_u128 = client.get_gas_price().await?;
+            let gas_price = U256::from(gas_price_u128);
             info!("Using legacy gas price: {} gwei", gas_price / U256::from(1_000_000_000u64));
             Ok((None, None, Some(gas_price)))
         }
@@ -103,7 +104,7 @@ pub async fn get_gas_prices(
 
 /// Estimate gas for a transaction
 pub async fn estimate_gas(
-    client: &impl Provider,
+    client: &RootProvider<Http<Client>>,
     from: Address,
     to: Option<Address>,
     data: &Bytes,
@@ -121,7 +122,8 @@ pub async fn estimate_gas(
         tx = tx.value(val);
     }
 
-    let gas = client.estimate_gas(&tx).await?;
+    let gas_u64 = client.estimate_gas(&tx).await?;
+    let gas = U256::from(gas_u64);
     info!("Estimated gas: {}", gas);
 
     // Add 20% buffer for safety
@@ -139,7 +141,7 @@ pub fn format_eth(wei: U256) -> String {
 
 /// Get a transaction by hash
 pub async fn get_transaction(
-    client: &impl Provider,
+    client: &RootProvider<Http<Client>>,
     tx_hash: TxHash,
 ) -> Result<alloy::rpc::types::Transaction> {
     client
@@ -150,7 +152,7 @@ pub async fn get_transaction(
 
 /// Broadcast a signed transaction
 pub async fn broadcast_transaction(
-    client: &impl Provider,
+    client: &RootProvider<Http<Client>>,
     signed_tx: &Bytes,
 ) -> Result<TxHash> {
     let pending_tx = client.send_raw_transaction(signed_tx).await?;
@@ -158,7 +160,7 @@ pub async fn broadcast_transaction(
 }
 
 /// Wait for transaction receipt
-pub async fn wait_for_receipt(client: &impl Provider, tx_hash: TxHash) -> Result<TxReceipt> {
+pub async fn wait_for_receipt(client: &RootProvider<Http<Client>>, tx_hash: TxHash) -> Result<TxReceipt> {
     // Poll for receipt with timeout
     let mut attempts = 0;
     const MAX_ATTEMPTS: u32 = 60; // 5 minutes with 5s intervals
