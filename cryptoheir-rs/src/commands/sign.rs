@@ -1,7 +1,6 @@
 //! Sign command - signs prepared transactions offline (no network required)
 
 use crate::{crypto, qr, tui, types::*, Result};
-use alloy::primitives::Bytes;
 use tracing::{info, warn};
 
 pub async fn execute(
@@ -53,7 +52,7 @@ pub async fn execute(
     info!("Signing transaction...");
 
     // Sign the transaction
-    let signed_tx = crypto::sign_transaction(&tx_params, &private_key)?;
+    let signed_tx = crypto::sign_transaction(&tx_params, &private_key).await?;
 
     // Save to file
     let json = serde_json::to_string_pretty(&signed_tx)?;
@@ -81,7 +80,7 @@ pub async fn execute(
 }
 
 fn display_transaction_summary(tx_params: &TxParams) {
-    println!("\n{'='}Transaction Review{'='}");
+    println!("\n========== Transaction Review ==========");
     println!("Network: {} (chain ID: {})",
         tx_params.metadata.network.name,
         tx_params.metadata.network.chain_id
@@ -97,5 +96,5 @@ fn display_transaction_summary(tx_params: &TxParams) {
     println!("Nonce: {}", tx_params.transaction.nonce);
     println!("Gas Limit: {}", tx_params.transaction.gas_limit);
     println!("Estimated Cost: {} ETH", tx_params.metadata.estimated_cost);
-    println!("{'='}");
+    println!("========================================");
 }

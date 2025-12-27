@@ -8,7 +8,7 @@ use crossterm::{
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph, Wrap},
@@ -202,7 +202,7 @@ fn create_transaction_details(tx_params: &TxParams) -> Text<'static> {
                 "Max Fee Per Gas: ",
                 Style::default().add_modifier(Modifier::BOLD),
             ),
-            Span::raw(format!("{} gwei", max_fee / 1_000_000_000u64)),
+            Span::raw(format!("{} gwei", max_fee / alloy::primitives::U256::from(1_000_000_000u64))),
         ]));
     }
 
@@ -212,14 +212,14 @@ fn create_transaction_details(tx_params: &TxParams) -> Text<'static> {
                 "Priority Fee: ",
                 Style::default().add_modifier(Modifier::BOLD),
             ),
-            Span::raw(format!("{} gwei", priority_fee / 1_000_000_000u64)),
+            Span::raw(format!("{} gwei", priority_fee / alloy::primitives::U256::from(1_000_000_000u64))),
         ]));
     }
 
     if let Some(gas_price) = tx_params.transaction.gas_price {
         lines.push(Line::from(vec![
             Span::styled("Gas Price: ", Style::default().add_modifier(Modifier::BOLD)),
-            Span::raw(format!("{} gwei", gas_price / 1_000_000_000u64)),
+            Span::raw(format!("{} gwei", gas_price / alloy::primitives::U256::from(1_000_000_000u64))),
         ]));
     }
 
