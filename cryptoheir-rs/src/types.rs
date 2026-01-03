@@ -36,6 +36,7 @@ impl Config {
 
 /// Network information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkInfo {
     pub name: String,
     pub chain_id: u64,
@@ -44,6 +45,7 @@ pub struct NetworkInfo {
 
 /// Transaction parameters (unsigned transaction)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TxParams {
     pub mode: TransactionMode,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -64,6 +66,7 @@ pub enum TransactionMode {
 
 /// Transaction data (compatible with both EIP-1559 and legacy transactions)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TransactionData {
     #[serde(rename = "type")]
     pub tx_type: u8,
@@ -97,6 +100,7 @@ pub struct TransactionData {
 
 /// Metadata about the transaction
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Metadata {
     pub network: NetworkInfo,
     pub estimated_cost: String,
@@ -109,6 +113,7 @@ pub struct Metadata {
 
 /// Signed transaction ready for broadcasting
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SignedTx {
     #[serde(rename = "signedTransaction")]
     pub signed_transaction: Bytes,
@@ -123,6 +128,7 @@ pub struct SignedTx {
 
 /// Transaction receipt after broadcasting
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TxReceipt {
     #[serde(rename = "transactionHash")]
     pub transaction_hash: TxHash,
