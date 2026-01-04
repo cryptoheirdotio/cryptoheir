@@ -102,6 +102,45 @@ pub async fn get_gas_prices(
     }
 }
 
+/// Extract revert data from an alloy RPC error
+fn extract_revert_data(error: &impl std::error::Error) -> Option<Bytes> {
+    let error_string = error.to_string();
+
+    // Try to find hex data that looks like revert data (0x followed by hex)
+    // Look for patterns like: 'data: "0x..."' or 'custom error 0x...'
+    for pattern in [r#"data: "0x"#, "custom error 0x", "0x"] {
+        if let Some(start) = error_string.find(pattern) {
+            let hex_start = if pattern.starts_with("data:") {
+                start + pattern.len()
+            } else if pattern == "custom error 0x" {
+                start + "custom error ".len()
+            } else {
+                start
+            };
+
+            let hex_str = &error_string[hex_start..];
+
+            // Take only the hex part (until first non-hex character or quote)
+            let hex_end = hex_str
+                .chars()
+                .skip(2) // Skip "0x"
+                .take_while(|c| c.is_ascii_hexdigit())
+                .count()
+                + 2;
+
+            if hex_end > 2 {
+                if let Ok(bytes) = hex_str[..hex_end].trim_matches('"').parse::<Bytes>() {
+                    if !bytes.is_empty() {
+                        return Some(bytes);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Estimate gas for a transaction
 pub async fn estimate_gas(
     client: &RootProvider<Http<Client>>,
@@ -122,15 +161,32 @@ pub async fn estimate_gas(
         tx = tx.value(val);
     }
 
-    let gas_u64 = client.estimate_gas(&tx).await?;
-    let gas = U256::from(gas_u64);
-    info!("Estimated gas: {}", gas);
+    match client.estimate_gas(&tx).await {
+        Ok(gas_u64) => {
+            let gas = U256::from(gas_u64);
+            info!("Estimated gas: {}", gas);
 
-    // Add 20% buffer for safety
-    let gas_with_buffer = gas * U256::from(120) / U256::from(100);
-    info!("Gas with 20% buffer: {}", gas_with_buffer);
+            // Add 20% buffer for safety
+            let gas_with_buffer = gas * U256::from(120) / U256::from(100);
+            info!("Gas with 20% buffer: {}", gas_with_buffer);
 
-    Ok(gas_with_buffer)
+            Ok(gas_with_buffer)
+        }
+        Err(e) => {
+            // Try to extract revert data and decode contract error
+            if let Some(revert_data) = extract_revert_data(&e) {
+                if let Some(decoded_error) = crate::contract::decode_contract_error(&revert_data) {
+                    return Err(eyre::eyre!(
+                        "Contract error: {}\n\nRaw revert data: {}",
+                        decoded_error,
+                        revert_data
+                    ));
+                }
+            }
+            // If we can't decode, return the original error
+            Err(e.into())
+        }
+    }
 }
 
 /// Format Wei to ETH string

@@ -4,7 +4,7 @@ use crate::Result;
 use alloy::{
     primitives::{Address, Bytes, U256},
     sol,
-    sol_types::SolCall,
+    sol_types::{SolCall, SolInterface},
 };
 
 /// Path to the compiled CryptoHeir contract artifact
@@ -107,4 +107,56 @@ pub fn encode_transfer_fee_collector(new_collector: Address) -> Result<Bytes> {
 pub fn encode_accept_fee_collector() -> Result<Bytes> {
     let call = CryptoHeir::acceptFeeCollectorCall {};
     Ok(call.abi_encode().into())
+}
+
+/// Decode contract revert data into a human-readable error message
+pub fn decode_contract_error(revert_data: &Bytes) -> Option<String> {
+    // Try to decode as a CryptoHeir error
+    if let Ok(error) = CryptoHeir::CryptoHeirErrors::abi_decode(revert_data, false) {
+        let message = match error {
+            CryptoHeir::CryptoHeirErrors::InvalidBeneficiary(_) => {
+                "Invalid beneficiary address (cannot be zero address or sender)"
+            }
+            CryptoHeir::CryptoHeirErrors::InvalidDeadline(_) => {
+                "Invalid deadline (must be in the future)"
+            }
+            CryptoHeir::CryptoHeirErrors::InsufficientAmount(_) => {
+                "Insufficient amount (cannot be zero)"
+            }
+            CryptoHeir::CryptoHeirErrors::InvalidTokenTransfer(_) => {
+                "Invalid token transfer (msg.value must be zero for ERC20 deposits)"
+            }
+            CryptoHeir::CryptoHeirErrors::InheritanceNotFound(_) => {
+                "Inheritance not found"
+            }
+            CryptoHeir::CryptoHeirErrors::AlreadyClaimed(_) => {
+                "Inheritance already claimed"
+            }
+            CryptoHeir::CryptoHeirErrors::DeadlineNotReached(_) => {
+                "Deadline not reached yet"
+            }
+            CryptoHeir::CryptoHeirErrors::DeadlineAlreadyPassed(_) => {
+                "Deadline already passed"
+            }
+            CryptoHeir::CryptoHeirErrors::OnlyDepositor(_) => {
+                "Only the depositor can perform this action"
+            }
+            CryptoHeir::CryptoHeirErrors::OnlyBeneficiary(_) => {
+                "Only the beneficiary can perform this action"
+            }
+            CryptoHeir::CryptoHeirErrors::OnlyFeeCollector(_) => {
+                "Only the fee collector can perform this action"
+            }
+            CryptoHeir::CryptoHeirErrors::InvalidFeeCollector(_) => {
+                "Invalid fee collector address"
+            }
+            CryptoHeir::CryptoHeirErrors::NoPendingTransfer(_) => {
+                "No pending fee collector transfer"
+            }
+            _ => "Unknown contract error"
+        };
+        Some(message.to_string())
+    } else {
+        None
+    }
 }
