@@ -25,9 +25,10 @@ pub async fn execute(
     // Load configuration
     let config = Config::load()?;
 
-    // Determine RPC URL
+    // Determine RPC URL (priority: CLI flag > env var > tx metadata > network name)
     let rpc_url = rpc_url
         .or(config.rpc_url)
+        .or_else(|| signed_tx.metadata.network.rpc_url.clone())
         .or_else(|| {
             network::get_rpc_url(
                 network.as_deref().unwrap_or("sepolia"),
