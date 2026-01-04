@@ -564,7 +564,8 @@ async function prepareTransaction() {
       metadata: {
         network: {
           name: network.name,
-          chainId: Number(network.chainId)
+          chainId: Number(network.chainId),
+          rpcUrl: rpcUrl
         },
         estimatedCost: ethers.formatEther(estimatedCost),
         timestamp: new Date().toISOString(),
