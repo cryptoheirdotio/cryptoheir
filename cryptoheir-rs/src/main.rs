@@ -98,6 +98,28 @@ enum Commands {
         #[arg(long)]
         qr_input: Option<String>,
     },
+
+    /// Generate a new 24-word BIP39 mnemonic phrase (works offline)
+    ///
+    /// This command generates a cryptographically secure 24-word mnemonic phrase
+    /// that can be used to derive Ethereum private keys. Store the mnemonic
+    /// securely - anyone with access to it can control your funds.
+    GenerateMnemonic {
+        /// Also show the first derived private key and address (index 0)
+        #[arg(long)]
+        show_keys: bool,
+    },
+
+    /// Derive Ethereum private key from a mnemonic phrase (works offline)
+    ///
+    /// This command prompts you to enter a 12 or 24-word mnemonic phrase
+    /// and derives an Ethereum private key using the standard BIP-44 derivation
+    /// path (m/44'/60'/0'/0/N). The mnemonic input is hidden for security.
+    DeriveKey {
+        /// Account index to derive (default: 0)
+        #[arg(short, long)]
+        index: Option<u32>,
+    },
 }
 
 #[tokio::main]
@@ -148,6 +170,12 @@ async fn main() -> Result<()> {
             qr_input,
         } => {
             commands::broadcast::execute(input, network, rpc_url, output, qr_input).await?;
+        }
+        Commands::GenerateMnemonic { show_keys } => {
+            commands::mnemonic::generate(show_keys).await?;
+        }
+        Commands::DeriveKey { index } => {
+            commands::mnemonic::derive(index).await?;
         }
     }
 
