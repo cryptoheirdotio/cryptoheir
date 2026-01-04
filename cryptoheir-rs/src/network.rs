@@ -166,16 +166,43 @@ pub async fn wait_for_receipt(client: &RootProvider<Http<Client>>, tx_hash: TxHa
     const MAX_ATTEMPTS: u32 = 60; // 5 minutes with 5s intervals
     const POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
 
+    info!("Polling for transaction receipt (max {} seconds)...", MAX_ATTEMPTS * 5);
+
     loop {
         match client.get_transaction_receipt(tx_hash).await? {
             Some(receipt) => {
+                info!("Receipt received after {} seconds", attempts * 5);
                 return receipt_to_tx_receipt(receipt);
             }
             None => {
                 attempts += 1;
-                if attempts >= MAX_ATTEMPTS {
-                    return Err(eyre::eyre!("Timeout waiting for transaction receipt"));
+
+                // Log progress every 6 attempts (30 seconds)
+                if attempts % 6 == 0 {
+                    info!(
+                        "Still waiting for receipt... ({}/{} seconds elapsed)",
+                        attempts * 5,
+                        MAX_ATTEMPTS * 5
+                    );
+                    println!(
+                        "  ⏳ Waiting for block to be mined... ({}/{} seconds)",
+                        attempts * 5,
+                        MAX_ATTEMPTS * 5
+                    );
                 }
+
+                if attempts >= MAX_ATTEMPTS {
+                    return Err(eyre::eyre!(
+                        "Timeout waiting for transaction receipt after {} seconds.\n\
+                         \n\
+                         The transaction may still be pending. You can:\n\
+                         1. Check the transaction on a block explorer\n\
+                         2. If using a local node (Anvil), mine a block: cast rpc anvil_mine\n\
+                         3. Run the broadcast command again (it will detect the existing transaction)",
+                        MAX_ATTEMPTS * 5
+                    ));
+                }
+
                 tokio::time::sleep(POLL_INTERVAL).await;
             }
         }
