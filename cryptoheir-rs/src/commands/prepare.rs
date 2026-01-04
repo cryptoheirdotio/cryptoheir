@@ -141,7 +141,7 @@ pub async fn execute(
     // Prepare transaction based on operation
     let tx_params = match operation {
         Operation::Deploy => {
-            prepare_deploy(&client, signer_address, nonce, chain_id, &network_name).await?
+            prepare_deploy(&client, signer_address, nonce, chain_id, &network_name, &rpc_url).await?
         }
         Operation::Deposit {
             beneficiary,
@@ -159,6 +159,7 @@ pub async fn execute(
                 nonce,
                 chain_id,
                 &network_name,
+                &rpc_url,
                 contract_addr,
                 beneficiary,
                 amount,
@@ -279,6 +280,7 @@ async fn prepare_deploy(
     nonce: u64,
     chain_id: u64,
     network_name: &str,
+    rpc_url: &str,
 ) -> Result<TxParams> {
     info!("Preparing contract deployment...");
 
@@ -333,7 +335,7 @@ async fn prepare_deploy(
             network: NetworkInfo {
                 name: network_name.to_string(),
                 chain_id,
-                rpc_url: None,
+                rpc_url: Some(rpc_url.to_string()),
             },
             estimated_cost,
             timestamp: chrono::Utc::now().to_rfc3339(),
@@ -350,6 +352,7 @@ async fn prepare_deposit(
     nonce: u64,
     chain_id: u64,
     network_name: &str,
+    rpc_url: &str,
     contract: Address,
     beneficiary: Address,
     amount: String,
@@ -419,7 +422,7 @@ async fn prepare_deposit(
             network: NetworkInfo {
                 name: network_name.to_string(),
                 chain_id,
-                rpc_url: None,
+                rpc_url: Some(rpc_url.to_string()),
             },
             estimated_cost,
             timestamp: chrono::Utc::now().to_rfc3339(),

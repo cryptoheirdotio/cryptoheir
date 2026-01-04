@@ -30,6 +30,48 @@ pub async fn execute(
         warn!("Transaction appears to already be signed");
     }
 
+    // Validate gas parameters match transaction type
+    match tx_params.transaction.tx_type {
+        2 => {
+            // EIP-1559 transaction must have max fees, not gas price
+            if tx_params.transaction.max_fee_per_gas.is_none() {
+                return Err(eyre::eyre!(
+                    "EIP-1559 transaction (type 2) requires maxFeePerGas but it is missing"
+                ));
+            }
+            if tx_params.transaction.max_priority_fee_per_gas.is_none() {
+                return Err(eyre::eyre!(
+                    "EIP-1559 transaction (type 2) requires maxPriorityFeePerGas but it is missing"
+                ));
+            }
+            if tx_params.transaction.gas_price.is_some() {
+                warn!("EIP-1559 transaction (type 2) should not have gasPrice field - it will be ignored");
+            }
+        }
+        0 => {
+            // Legacy transaction must have gas price, not EIP-1559 fees
+            if tx_params.transaction.gas_price.is_none() {
+                return Err(eyre::eyre!(
+                    "Legacy transaction (type 0) requires gasPrice but it is missing"
+                ));
+            }
+            if tx_params.transaction.max_fee_per_gas.is_some() || tx_params.transaction.max_priority_fee_per_gas.is_some() {
+                warn!("Legacy transaction (type 0) should not have EIP-1559 fee fields - they will be ignored");
+            }
+        }
+        _ => {
+            return Err(eyre::eyre!(
+                "Unsupported transaction type: {}. Only type 0 (legacy) and type 2 (EIP-1559) are supported",
+                tx_params.transaction.tx_type
+            ));
+        }
+    }
+
+    info!(
+        "Transaction type {} validated with appropriate gas parameters",
+        tx_params.transaction.tx_type
+    );
+
     // Display transaction for review (interactive TUI or simple display)
     if !skip_review {
         info!("Launching transaction review UI...");

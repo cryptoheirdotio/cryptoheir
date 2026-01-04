@@ -80,20 +80,20 @@ pub struct TransactionData {
     pub gas_limit: U256,
 
     // EIP-1559 fields
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[serde(with = "optional_u256_hex")]
     pub max_fee_per_gas: Option<U256>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[serde(with = "optional_u256_hex")]
     pub max_priority_fee_per_gas: Option<U256>,
 
     // Legacy field
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[serde(with = "optional_u256_hex")]
     pub gas_price: Option<U256>,
 
     // Optional value for payable functions
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[serde(with = "optional_u256_hex")]
     pub value: Option<U256>,
 }
