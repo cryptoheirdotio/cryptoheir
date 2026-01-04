@@ -84,15 +84,13 @@ async fn sign_eip1559(
         access_list: Default::default(),
     };
 
-    // Get the signature hash
-    let tx_hash = tx.signature_hash();
-
     // Sign the hash with the private key
     let sig_hash = tx.signature_hash();
     let signature = signer.sign_hash(&sig_hash).await?;
 
     // Create signed transaction and wrap in TxEnvelope
     let signed_tx = tx.into_signed(signature);
+    let tx_hash = *signed_tx.hash();
     let envelope = TxEnvelope::Eip1559(signed_tx);
 
     // Encode using alloy's encoding
@@ -120,15 +118,13 @@ async fn sign_legacy(
         input: tx_data.data.clone(),
     };
 
-    // Get the signature hash
-    let tx_hash = tx.signature_hash();
-
     // Sign the hash with the private key
     let sig_hash = tx.signature_hash();
     let signature = signer.sign_hash(&sig_hash).await?;
 
     // Create signed transaction and wrap in TxEnvelope
     let signed_tx = tx.into_signed(signature);
+    let tx_hash = *signed_tx.hash();
     let envelope = TxEnvelope::Legacy(signed_tx);
 
     // Encode using alloy's encoding
