@@ -293,10 +293,20 @@ async fn prepare_deploy(
     let (max_fee_per_gas, max_priority_fee_per_gas, gas_price) =
         network::get_gas_prices(client).await?;
 
+    // Determine transaction type and set appropriate gas fields
+    let (tx_type, final_max_fee, final_priority_fee, final_gas_price) =
+        if max_fee_per_gas.is_some() {
+            // EIP-1559 transaction (type 2)
+            (2, max_fee_per_gas, max_priority_fee_per_gas, None)
+        } else {
+            // Legacy transaction (type 0)
+            (0, None, None, gas_price)
+        };
+
     // Calculate estimated cost
-    let estimated_cost = if let Some(max_fee) = max_fee_per_gas {
+    let estimated_cost = if let Some(max_fee) = final_max_fee {
         network::format_eth(gas_limit * max_fee)
-    } else if let Some(price) = gas_price {
+    } else if let Some(price) = final_gas_price {
         network::format_eth(gas_limit * price)
     } else {
         "unknown".to_string()
@@ -307,16 +317,16 @@ async fn prepare_deploy(
         function_name: None,
         params: None,
         transaction: TransactionData {
-            tx_type: if max_fee_per_gas.is_some() { 2 } else { 0 },
+            tx_type,
             from,
             to: None,
             data,
             nonce,
             chain_id,
             gas_limit,
-            max_fee_per_gas,
-            max_priority_fee_per_gas,
-            gas_price,
+            max_fee_per_gas: final_max_fee,
+            max_priority_fee_per_gas: final_priority_fee,
+            gas_price: final_gas_price,
             value: None,
         },
         metadata: Metadata {
@@ -362,10 +372,20 @@ async fn prepare_deposit(
     let (max_fee_per_gas, max_priority_fee_per_gas, gas_price) =
         network::get_gas_prices(client).await?;
 
+    // Determine transaction type and set appropriate gas fields
+    let (tx_type, final_max_fee, final_priority_fee, final_gas_price) =
+        if max_fee_per_gas.is_some() {
+            // EIP-1559 transaction (type 2)
+            (2, max_fee_per_gas, max_priority_fee_per_gas, None)
+        } else {
+            // Legacy transaction (type 0)
+            (0, None, None, gas_price)
+        };
+
     // Calculate estimated cost (including value being sent)
-    let gas_cost = if let Some(max_fee) = max_fee_per_gas {
+    let gas_cost = if let Some(max_fee) = final_max_fee {
         gas_limit * max_fee
-    } else if let Some(price) = gas_price {
+    } else if let Some(price) = final_gas_price {
         gas_limit * price
     } else {
         U256::ZERO
@@ -383,16 +403,16 @@ async fn prepare_deposit(
             "token": token,
         })),
         transaction: TransactionData {
-            tx_type: if max_fee_per_gas.is_some() { 2 } else { 0 },
+            tx_type,
             from,
             to: Some(contract),
             data,
             nonce,
             chain_id,
             gas_limit,
-            max_fee_per_gas,
-            max_priority_fee_per_gas,
-            gas_price,
+            max_fee_per_gas: final_max_fee,
+            max_priority_fee_per_gas: final_priority_fee,
+            gas_price: final_gas_price,
             value,
         },
         metadata: Metadata {
