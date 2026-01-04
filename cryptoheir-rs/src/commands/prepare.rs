@@ -23,7 +23,7 @@ pub enum Operation {
         #[arg(short, long)]
         amount: String,
 
-        /// Deadline (Unix timestamp in seconds)
+        /// Deadline in days from now (e.g., 365 for one year)
         #[arg(short, long)]
         deadline: u64,
 
@@ -64,7 +64,7 @@ pub enum Operation {
         #[arg(short, long)]
         id: U256,
 
-        /// New deadline (Unix timestamp in seconds)
+        /// New deadline in days from now (e.g., 365 for one year)
         #[arg(short, long)]
         new_deadline: u64,
 
@@ -361,15 +361,40 @@ async fn prepare_deposit(
 ) -> Result<TxParams> {
     info!("Preparing deposit transaction...");
 
+    // Convert deadline from days to Unix timestamp
+    let deadline_days = deadline;
+    let current_timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let deadline_timestamp = current_timestamp + (deadline_days * 86400); // 86400 seconds per day
+
     // Parse amount
     let amount_wei = alloy::primitives::utils::parse_ether(&amount)?;
 
     // Encode function call
     let (data, value) =
-        contract::encode_deposit(beneficiary, amount_wei, deadline, token).await?;
+        contract::encode_deposit(beneficiary, amount_wei, deadline_timestamp, token).await?;
 
-    // Estimate gas
-    let gas_limit = network::estimate_gas(client, from, Some(contract), &data, value).await?;
+    // Estimate gas - with enhanced error handling for common user mistakes
+    let gas_limit = match network::estimate_gas(client, from, Some(contract), &data, value).await {
+        Ok(gas) => gas,
+        Err(e) => {
+            let error_msg = e.to_string();
+
+            // Provide helpful context for InvalidDeadline error
+            if error_msg.contains("Invalid deadline") {
+                eprintln!("\nTransaction validation failed!");
+                eprintln!("Reason: Deadline must be in the future");
+                eprintln!("Your deadline: {} days from now", deadline_days);
+                eprintln!("Deadline timestamp: {} (Unix timestamp)", deadline_timestamp);
+                eprintln!("\nNote: The deadline value should be positive (days in the future)");
+                eprintln!("      Example: --deadline 365 (for one year from now)\n");
+            }
+
+            return Err(e);
+        }
+    };
 
     // Get gas prices
     let (max_fee_per_gas, max_priority_fee_per_gas, gas_price) =
@@ -402,7 +427,8 @@ async fn prepare_deposit(
         params: Some(serde_json::json!({
             "beneficiary": beneficiary,
             "amount": amount,
-            "deadline": deadline,
+            "deadlineDays": deadline_days,
+            "deadlineTimestamp": deadline_timestamp,
             "token": token,
         })),
         transaction: TransactionData {
