@@ -50,5 +50,8 @@ hex = "0.4"
 chrono = "0.4"
 rand = "0.8"
 
+# OpenSSL with vendored feature for cross-compilation
+openssl-sys = { version = "0.9", features = ["vendored"] }
+
 [dev-dependencies]
 tempfile = "3.14"
