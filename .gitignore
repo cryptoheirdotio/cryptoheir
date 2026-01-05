@@ -36,3 +36,6 @@ build/
 
 # cryptoheir-rs
 /cryptoheir-rs/target
+
+# for deploy the contract to production
+production-deployment
