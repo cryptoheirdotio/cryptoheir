@@ -15,7 +15,7 @@ export const NETWORKS = {
   mainnet: {
     name: 'Ethereum Mainnet',
     chainId: 1,
-    contractAddress: '', // TODO: Add your deployed Mainnet contract address here
+    contractAddress: '0xde106d79FA84098938eC28E020E928479faB4942',
     explorer: 'https://etherscan.io',
   },
 };
