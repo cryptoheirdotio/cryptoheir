@@ -105,15 +105,32 @@ pub async fn execute(
     let config = Config::load()?;
 
     // Determine RPC URL
+    let network_name = network.as_deref().unwrap_or("sepolia");
+    let has_rpc_url = config.rpc_url.is_some();
+    let has_infura_key = config.infura_api_key.is_some();
+
     let rpc_url = rpc_url
         .or(config.rpc_url)
         .or_else(|| {
             network::get_rpc_url(
-                network.as_deref().unwrap_or("sepolia"),
+                network_name,
                 config.infura_api_key.as_deref(),
             )
         })
-        .ok_or_else(|| eyre::eyre!("No RPC URL provided or configured"))?;
+        .ok_or_else(|| {
+            if network.is_some() && !has_infura_key && !has_rpc_url {
+                eyre::eyre!(
+                    "Network '{}' requires an Infura API key.\n\n\
+                    Please either:\n\
+                    1. Set INFURA_API_KEY in your .env file (get one at https://infura.io/)\n\
+                    2. Use --rpc-url to specify a custom RPC endpoint\n\
+                    3. Set RPC_URL in your .env file",
+                    network_name
+                )
+            } else {
+                eyre::eyre!("No RPC URL provided or configured")
+            }
+        })?;
 
     info!("Connecting to network via {}", rpc_url);
 
@@ -127,11 +144,16 @@ pub async fn execute(
 
     // Get network info
     let chain_id = network::get_chain_id(&client).await?;
-    let network_name = network.unwrap_or_else(|| "custom".to_string());
+    // Use the actual network name if provided, otherwise show "custom"
+    let network_name_display = if network.is_some() {
+        network_name.to_string()
+    } else {
+        "custom".to_string()
+    };
 
     info!(
         "Connected to {} (chain ID: {})",
-        network_name, chain_id
+        network_name_display, chain_id
     );
 
     // Get nonce
