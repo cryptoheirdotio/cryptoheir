@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { formatEther, decodeEventLog, parseAbiItem } from 'viem';
 import { contractABI } from '../utils/contract';
 
-export const useInheritanceHistory = (contractAddress, publicClient, account) => {
+export const useInheritanceHistory = (contractAddress, publicClient, account, networkInfo) => {
   const [deposits, setDeposits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,28 +18,58 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
       setError('');
 
       try {
-        // Query all InheritanceCreated events
-        const logs = await publicClient.getLogs({
-          address: contractAddress,
-          event: parseAbiItem('event InheritanceCreated(uint256 indexed inheritanceId, address indexed depositor, address indexed beneficiary, address token, uint256 amount, uint256 deadline)'),
-          fromBlock: 0n,
-          toBlock: 'latest'
-        });
+        // Use deployment block if available, otherwise fall back to block 0
+        // This prevents querying millions of blocks on mainnet
+        const fromBlock = networkInfo?.deploymentBlock ?? 0n;
 
-        // Query claim and reclaim events to determine final status
-        const claimedLogs = await publicClient.getLogs({
-          address: contractAddress,
-          event: parseAbiItem('event InheritanceClaimed(uint256 indexed inheritanceId, address indexed beneficiary, address token, uint256 amount)'),
-          fromBlock: 0n,
-          toBlock: 'latest'
-        });
+        // Get current block number
+        const currentBlock = await publicClient.getBlockNumber();
 
-        const reclaimedLogs = await publicClient.getLogs({
-          address: contractAddress,
-          event: parseAbiItem('event InheritanceReclaimed(uint256 indexed inheritanceId, address indexed depositor, address token, uint256 amount)'),
-          fromBlock: 0n,
-          toBlock: 'latest'
-        });
+        // Query logs in chunks to avoid RPC provider limits
+        // eth.merkle.io has a max range of 1,000 blocks
+        const CHUNK_SIZE = 1000n;
+        const allLogs = [];
+        const allClaimedLogs = [];
+        const allReclaimedLogs = [];
+
+        // Calculate chunks
+        let startBlock = fromBlock;
+        while (startBlock <= currentBlock) {
+          const endBlock = startBlock + CHUNK_SIZE > currentBlock ? currentBlock : startBlock + CHUNK_SIZE;
+
+          // Query all InheritanceCreated events for this chunk
+          const logs = await publicClient.getLogs({
+            address: contractAddress,
+            event: parseAbiItem('event InheritanceCreated(uint256 indexed inheritanceId, address indexed depositor, address indexed beneficiary, address token, uint256 amount, uint256 deadline)'),
+            fromBlock: startBlock,
+            toBlock: endBlock
+          });
+          allLogs.push(...logs);
+
+          // Query claim events for this chunk
+          const claimedLogs = await publicClient.getLogs({
+            address: contractAddress,
+            event: parseAbiItem('event InheritanceClaimed(uint256 indexed inheritanceId, address indexed beneficiary, address token, uint256 amount)'),
+            fromBlock: startBlock,
+            toBlock: endBlock
+          });
+          allClaimedLogs.push(...claimedLogs);
+
+          // Query reclaim events for this chunk
+          const reclaimedLogs = await publicClient.getLogs({
+            address: contractAddress,
+            event: parseAbiItem('event InheritanceReclaimed(uint256 indexed inheritanceId, address indexed depositor, address token, uint256 amount)'),
+            fromBlock: startBlock,
+            toBlock: endBlock
+          });
+          allReclaimedLogs.push(...reclaimedLogs);
+
+          startBlock = endBlock + 1n;
+        }
+
+        const logs = allLogs;
+        const claimedLogs = allClaimedLogs;
+        const reclaimedLogs = allReclaimedLogs;
 
         // Build maps for quick lookup
         const claimedMap = new Map();
@@ -156,7 +186,7 @@ export const useInheritanceHistory = (contractAddress, publicClient, account) =>
     };
 
     fetchHistory();
-  }, [contractAddress, publicClient, account]);
+  }, [contractAddress, publicClient, account, networkInfo]);
 
   return { deposits, loading, error };
 };
