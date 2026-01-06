@@ -5,8 +5,9 @@ import ThemeToggle from './ThemeToggle';
 export function Navigation({ isConnected }) {
   return (
     <div className="glass-navbar sticky top-0 z-50 shadow-smooth-lg">
-      <div className="navbar container mx-auto">
+      <div className="navbar w-full px-4">
         <div className="navbar-start">
+          {/* Logo and branding */}
           <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               CryptoHeir
@@ -15,6 +16,7 @@ export function Navigation({ isConnected }) {
           </div>
         </div>
 
+        {/* Desktop horizontal menu */}
         <div className="navbar-center hidden lg:flex">
           <ul className="menu menu-horizontal px-1 gap-1">
             <li>
@@ -78,6 +80,73 @@ export function Navigation({ isConnected }) {
         </div>
 
         <div className="navbar-end gap-2">
+          {/* Mobile hamburger menu */}
+          <div className="dropdown dropdown-end lg:hidden">
+            <label tabIndex={0} className="btn btn-ghost btn-square btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </label>
+            <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+              <li>
+                <NavLink
+                  to="/"
+                  className={({ isActive }) =>
+                    `font-medium transition-all ${isActive ? 'active' : 'hover:bg-base-200'}`
+                  }
+                  end
+                >
+                  Home
+                </NavLink>
+              </li>
+              {isConnected ? (
+                <>
+                  <li>
+                    <NavLink
+                      to="/deposit"
+                      className={({ isActive }) =>
+                        `font-medium transition-all ${isActive ? 'active' : 'hover:bg-base-200'}`
+                      }
+                    >
+                      Deposit
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/manage"
+                      className={({ isActive }) =>
+                        `font-medium transition-all ${isActive ? 'active' : 'hover:bg-base-200'}`
+                      }
+                    >
+                      Manage
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/history"
+                      className={({ isActive }) =>
+                        `font-medium transition-all ${isActive ? 'active' : 'hover:bg-base-200'}`
+                      }
+                    >
+                      History
+                    </NavLink>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li className="disabled">
+                    <span className="opacity-50 cursor-not-allowed font-medium">Deposit</span>
+                  </li>
+                  <li className="disabled">
+                    <span className="opacity-50 cursor-not-allowed font-medium">Manage</span>
+                  </li>
+                  <li className="disabled">
+                    <span className="opacity-50 cursor-not-allowed font-medium">History</span>
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
           <ThemeToggle />
           <ConnectButton.Custom>
             {({
