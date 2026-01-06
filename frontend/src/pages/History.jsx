@@ -7,7 +7,7 @@ export function History() {
   const { contractAddress, account, networkInfo } = useOutletContext();
   const publicClient = usePublicClient();
   const navigate = useNavigate();
-  const { deposits, loading, error } = useInheritanceHistory(contractAddress, publicClient, account);
+  const { deposits, loading, error } = useInheritanceHistory(contractAddress, publicClient, account, networkInfo);
 
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
