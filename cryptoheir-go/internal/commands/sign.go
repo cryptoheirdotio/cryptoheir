@@ -48,10 +48,12 @@ func runSign(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Transaction parameters loaded")
-	log.Infof("  Network: %s (Chain ID: %d)", txParams.Metadata.Network.Name, txParams.Transaction.ChainID)
-	log.Infof("  Mode: %s", txParams.Mode)
+	log.Info("  Network",
+		"network", txParams.Metadata.Network.Name,
+		"chain_id", txParams.Transaction.ChainID)
+	log.Info("  Mode", "mode", txParams.Mode)
 	if txParams.FunctionName != "" {
-		log.Infof("  Function: %s", txParams.FunctionName)
+		log.Info("  Function", "function", txParams.FunctionName)
 	}
 
 	// Validate transaction parameters
@@ -100,9 +102,9 @@ func runSign(cmd *cobra.Command, args []string) error {
 	signedTx.Metadata.SignedAt = time.Now().UTC().Format(time.RFC3339)
 
 	log.Info("✓ Transaction signed successfully")
-	log.Infof("  TX Hash: %s", signedTx.TxHash.Hex())
+	log.Info("  TX Hash", "hash", signedTx.TxHash.Hex())
 	if signedTx.PredictedContractAddress != nil {
-		log.Infof("  Predicted Contract Address: %s", signedTx.PredictedContractAddress.Hex())
+		log.Info("  Predicted Contract Address", "address", signedTx.PredictedContractAddress.Hex())
 	}
 
 	// Save signed transaction
@@ -115,9 +117,10 @@ func runSign(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
 
-	log.Infof("✓ Signed transaction saved to %s", signOutputFlag)
-	log.Infof("  Next: Transfer to online machine and run 'cryptoheir broadcast -i %s --network %s'",
-		signOutputFlag, txParams.Metadata.Network.Name)
+	log.Info("✓ Signed transaction saved", "file", signOutputFlag)
+	log.Info("  Next",
+		"instruction", fmt.Sprintf("Transfer to online machine and run 'cryptoheir broadcast -i %s --network %s'",
+			signOutputFlag, txParams.Metadata.Network.Name))
 
 	return nil
 }

@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/cryptoheirdotio/cryptoheir/cryptoheir-go/internal/commands"
-	"github.com/sirupsen/logrus"
+	"github.com/cryptoheirdotio/cryptoheir/cryptoheir-go/internal/network"
 	"github.com/spf13/cobra"
 )
 
 var (
-	log     = logrus.New()
+	logger  *slog.Logger
 	verbose bool
 )
 
@@ -31,16 +32,22 @@ Features:
   - Multi-network support (Ethereum, Polygon, Arbitrum, Optimism, Base, Linea)`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Configure logging
+		var logLevel slog.Level
 		if verbose {
-			log.SetLevel(logrus.DebugLevel)
+			logLevel = slog.LevelDebug
 		} else {
-			log.SetLevel(logrus.InfoLevel)
+			logLevel = slog.LevelInfo
 		}
 
-		log.SetFormatter(&logrus.TextFormatter{
-			FullTimestamp: true,
-			DisableColors: false,
+		// Create text handler with specified log level
+		handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: logLevel,
 		})
+		logger = slog.New(handler)
+
+		// Set logger for subpackages
+		commands.SetLogger(logger)
+		network.SetLogger(logger)
 	},
 }
 

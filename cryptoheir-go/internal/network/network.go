@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"time"
 
@@ -11,10 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.New()
+var log *slog.Logger
+
+// SetLogger sets the logger for the network package
+func SetLogger(logger *slog.Logger) {
+	log = logger
+}
 
 // GetRPCURL returns the RPC URL for a given network name
 func GetRPCURL(network string, infuraAPIKey string) (string, error) {
@@ -190,14 +195,14 @@ func WaitForReceipt(ctx context.Context, client *ethclient.Client, txHash common
 	interval := 5 * time.Second
 	deadline := time.Now().Add(timeout)
 
-	log.Infof("Waiting for transaction %s to be mined...", txHash.Hex())
+	log.Info("Waiting for transaction to be mined", "hash", txHash.Hex())
 
 	lastLog := time.Now()
 	for time.Now().Before(deadline) {
 		receipt, err := client.TransactionReceipt(ctx, txHash)
 		if err == nil {
 			// Receipt found
-			log.Infof("Transaction mined in block %d", receipt.BlockNumber.Uint64())
+			log.Info("Transaction mined", "block", receipt.BlockNumber.Uint64())
 
 			var contractAddr *common.Address
 			if receipt.ContractAddress != (common.Address{}) {

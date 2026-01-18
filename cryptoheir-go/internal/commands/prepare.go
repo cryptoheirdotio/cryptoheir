@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"os"
 	"time"
@@ -14,11 +15,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var log = logrus.New()
+var log *slog.Logger
+
+// SetLogger sets the logger for the commands package
+func SetLogger(logger *slog.Logger) {
+	log = logger
+}
 
 // PrepareCmd represents the prepare command
 var PrepareCmd = &cobra.Command{
@@ -98,21 +103,21 @@ func runPrepare(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Chain ID: %d", chainID)
+	log.Info("Chain ID", "chain_id", chainID)
 
 	// Get signer address
 	if config.SignerAddress == nil {
 		return fmt.Errorf("SIGNER_ADDRESS not set in environment")
 	}
 	signerAddress := *config.SignerAddress
-	log.Infof("Signer address: %s", signerAddress.Hex())
+	log.Info("Signer address", "address", signerAddress.Hex())
 
 	// Get nonce
 	nonce, err := network.GetNonce(ctx, client, signerAddress)
 	if err != nil {
 		return err
 	}
-	log.Infof("Nonce: %d", nonce)
+	log.Info("Nonce", "nonce", nonce)
 
 	// Prepare transaction based on operation
 	var txParams *types.TxParams
@@ -139,9 +144,9 @@ func runPrepare(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
 
-	log.Infof("✓ Transaction prepared successfully")
-	log.Infof("  Output: %s", outputFlag)
-	log.Infof("  Next: Transfer to offline machine and run 'cryptoheir sign -i %s'", outputFlag)
+	log.Info("✓ Transaction prepared successfully")
+	log.Info("  Output", "file", outputFlag)
+	log.Info("  Next", "instruction", fmt.Sprintf("Transfer to offline machine and run 'cryptoheir sign -i %s'", outputFlag))
 
 	return nil
 }
@@ -154,14 +159,14 @@ func prepareDeploy(ctx context.Context, client *ethclient.Client, signerAddress 
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("Contract bytecode loaded (%d bytes)", len(bytecode))
+	log.Info("Contract bytecode loaded", "bytes", len(bytecode))
 
 	// Estimate gas
 	gasLimit, err := network.EstimateGas(ctx, client, signerAddress, nil, bytecode, nil)
 	if err != nil {
 		return nil, fmt.Errorf("gas estimation failed: %w", err)
 	}
-	log.Infof("Estimated gas: %s", gasLimit.String())
+	log.Info("Estimated gas", "gas", gasLimit.String())
 
 	// Get gas prices
 	gasPrices, err := network.GetGasPrices(ctx, client)
@@ -184,12 +189,13 @@ func prepareDeploy(ctx context.Context, client *ethclient.Client, signerAddress 
 		txData.TxType = 2
 		txData.MaxFeePerGas = types.NewBigInt(gasPrices.MaxFeePerGas)
 		txData.MaxPriorityFeePerGas = types.NewBigInt(gasPrices.MaxPriorityFeePerGas)
-		log.Infof("EIP-1559: Max fee %s gwei, Priority %s gwei",
-			weiToGwei(gasPrices.MaxFeePerGas), weiToGwei(gasPrices.MaxPriorityFeePerGas))
+		log.Info("EIP-1559",
+			"max_fee_gwei", weiToGwei(gasPrices.MaxFeePerGas),
+			"priority_fee_gwei", weiToGwei(gasPrices.MaxPriorityFeePerGas))
 	} else {
 		txData.TxType = 0
 		txData.GasPrice = types.NewBigInt(gasPrices.GasPrice)
-		log.Infof("Legacy: Gas price %s gwei", weiToGwei(gasPrices.GasPrice))
+		log.Info("Legacy", "gas_price_gwei", weiToGwei(gasPrices.GasPrice))
 	}
 
 	// Build metadata
@@ -262,7 +268,7 @@ func prepareDeposit(ctx context.Context, client *ethclient.Client, config *types
 	if err != nil {
 		return nil, fmt.Errorf("gas estimation failed: %w", err)
 	}
-	log.Infof("Estimated gas: %s", gasLimit.String())
+	log.Info("Estimated gas", "gas", gasLimit.String())
 
 	// Get gas prices
 	gasPrices, err := network.GetGasPrices(ctx, client)
@@ -283,7 +289,7 @@ func prepareDeposit(ctx context.Context, client *ethclient.Client, config *types
 	// Set value if native token
 	if value != nil {
 		txData.Value = types.NewBigInt(value)
-		log.Infof("Deposit value: %s", network.FormatEth(value))
+		log.Info("Deposit value", "value", network.FormatEth(value))
 	}
 
 	// Set gas prices
@@ -323,7 +329,7 @@ func prepareDeposit(ctx context.Context, client *ethclient.Client, config *types
 		Metadata:     metadata,
 	}
 
-	log.Infof("Deposit prepared for beneficiary %s", beneficiary.Hex())
+	log.Info("Deposit prepared for beneficiary", "beneficiary", beneficiary.Hex())
 	return txParams, nil
 }
 

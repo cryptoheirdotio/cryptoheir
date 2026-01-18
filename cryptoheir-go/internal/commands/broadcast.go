@@ -49,9 +49,11 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Signed transaction loaded")
-	log.Infof("  TX Hash: %s", signedTx.TxHash.Hex())
-	log.Infof("  From: %s", signedTx.From.Hex())
-	log.Infof("  Network: %s (Chain ID: %d)", signedTx.Metadata.Network.Name, signedTx.Metadata.Network.ChainID)
+	log.Info("  TX Hash", "hash", signedTx.TxHash.Hex())
+	log.Info("  From", "address", signedTx.From.Hex())
+	log.Info("  Network",
+		"network", signedTx.Metadata.Network.Name,
+		"chain_id", signedTx.Metadata.Network.ChainID)
 
 	// Load configuration
 	config, err := types.LoadConfig()
@@ -94,7 +96,7 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("chain ID mismatch: connected to chain %d but transaction is for chain %d",
 			chainID, signedTx.Metadata.Network.ChainID)
 	}
-	log.Infof("✓ Chain ID verified: %d", chainID)
+	log.Info("✓ Chain ID verified", "chain_id", chainID)
 
 	// Check if transaction already broadcast (idempotent)
 	_, isPending, err := network.GetTransaction(ctx, client, signedTx.TxHash)
@@ -110,10 +112,10 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 		if !isPending {
 			receipt, err := client.TransactionReceipt(ctx, signedTx.TxHash)
 			if err == nil {
-				log.Infof("  Block: %d", receipt.BlockNumber.Uint64())
-				log.Infof("  Status: %d (1=success, 0=failed)", receipt.Status)
+				log.Info("  Block", "block", receipt.BlockNumber.Uint64())
+				log.Info("  Status (1=success, 0=failed)", "status", receipt.Status)
 				if receipt.ContractAddress != (common.Address{}) {
-					log.Infof("  Contract Address: %s", receipt.ContractAddress.Hex())
+					log.Info("  Contract Address", "address", receipt.ContractAddress.Hex())
 				}
 				return nil
 			}
@@ -130,12 +132,13 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 		}
 
 		if txHash != signedTx.TxHash {
-			log.Warnf("⚠ Warning: broadcast TX hash (%s) differs from signed TX hash (%s)",
-				txHash.Hex(), signedTx.TxHash.Hex())
+			log.Warn("⚠ Warning: broadcast TX hash differs from signed TX hash",
+				"broadcast_hash", txHash.Hex(),
+				"signed_hash", signedTx.TxHash.Hex())
 		}
 
-		log.Infof("✓ Transaction broadcast successfully")
-		log.Infof("  TX Hash: %s", txHash.Hex())
+		log.Info("✓ Transaction broadcast successfully")
+		log.Info("  TX Hash", "hash", txHash.Hex())
 	}
 
 	// Wait for receipt
@@ -152,10 +155,10 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 	log.Info("═════════════════════════════════════════")
 	log.Info("✓ TRANSACTION CONFIRMED")
 	log.Info("═════════════════════════════════════════")
-	log.Infof("  TX Hash: %s", receipt.TransactionHash.Hex())
-	log.Infof("  Block: %d", receipt.BlockNumber)
-	log.Infof("  Status: %d (1=success, 0=failed)", receipt.Status)
-	log.Infof("  Gas Used: %s", receipt.GasUsed)
+	log.Info("  TX Hash", "hash", receipt.TransactionHash.Hex())
+	log.Info("  Block", "block", receipt.BlockNumber)
+	log.Info("  Status (1=success, 0=failed)", "status", receipt.Status)
+	log.Info("  Gas Used", "gas_used", receipt.GasUsed)
 
 	if receipt.Status == 0 {
 		log.Error("⚠ TRANSACTION FAILED - Check block explorer for details")
@@ -163,12 +166,12 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 
 	if receipt.ContractAddress != nil && *receipt.ContractAddress != (common.Address{}) {
 		log.Info("  Contract Deployed:")
-		log.Infof("    Address: %s", receipt.ContractAddress.Hex())
+		log.Info("    Address", "address", receipt.ContractAddress.Hex())
 
 		if signedTx.PredictedContractAddress != nil &&
 			*receipt.ContractAddress != *signedTx.PredictedContractAddress {
-			log.Warnf("    ⚠ Warning: Address differs from predicted %s",
-				signedTx.PredictedContractAddress.Hex())
+			log.Warn("    ⚠ Warning: Address differs from predicted",
+				"predicted", signedTx.PredictedContractAddress.Hex())
 		}
 	}
 
@@ -176,12 +179,12 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 	receiptFilename := fmt.Sprintf("%s-receipt.json", broadcastInputFlag[:len(broadcastInputFlag)-5])
 	receiptData, err := json.MarshalIndent(receipt, "", "  ")
 	if err != nil {
-		log.Warnf("Failed to serialize receipt: %v", err)
+		log.Warn("Failed to serialize receipt", "error", err)
 	} else {
 		if err := os.WriteFile(receiptFilename, receiptData, 0644); err != nil {
-			log.Warnf("Failed to write receipt file: %v", err)
+			log.Warn("Failed to write receipt file", "error", err)
 		} else {
-			log.Infof("  Receipt saved: %s", receiptFilename)
+			log.Info("  Receipt saved", "file", receiptFilename)
 		}
 	}
 
