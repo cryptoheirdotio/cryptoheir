@@ -1,12 +1,11 @@
 package contract
 
 import (
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -21,6 +20,9 @@ type ContractArtifact struct {
 	} `json:"bytecode"`
 }
 
+//go:embed CryptoHeir.json
+var contractArtifactJSON []byte
+
 var (
 	contractABI      abi.ABI
 	contractBytecode []byte
@@ -28,18 +30,9 @@ var (
 
 // Initialize loads the contract artifact and parses ABI
 func Initialize() error {
-	// Get the contract artifact path relative to project root
-	artifactPath := filepath.Join("..", "foundry", "out", "CryptoHeir.sol", "CryptoHeir.json")
-
-	// Read artifact file
-	data, err := os.ReadFile(artifactPath)
-	if err != nil {
-		return fmt.Errorf("failed to read contract artifact: %w", err)
-	}
-
-	// Parse artifact
+	// Parse embedded artifact
 	var artifact ContractArtifact
-	if err := json.Unmarshal(data, &artifact); err != nil {
+	if err := json.Unmarshal(contractArtifactJSON, &artifact); err != nil {
 		return fmt.Errorf("failed to parse contract artifact: %w", err)
 	}
 
