@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.24;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -10,7 +10,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  * @notice A time-locked fund transfer contract allowing deposits with deadlines
  * @dev Supports deposit, claim, reclaim, and deadline extension for both native and ERC20 tokens
  */
-contract CryptoHeir is ReentrancyGuard {
+contract CryptoHeir is ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     // Fee collector who receives fees
