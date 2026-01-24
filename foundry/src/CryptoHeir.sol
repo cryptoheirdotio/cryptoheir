@@ -117,6 +117,7 @@ contract CryptoHeir is ReentrancyGuardTransient {
         nonReentrant
         returns (uint256)
     {
+        // CHECKS - Input validation
         if (_beneficiary == address(0)) revert InvalidBeneficiary();
         if (_beneficiary == msg.sender) revert InvalidBeneficiary();
         if (_deadline <= block.timestamp) revert InvalidDeadline();
@@ -129,33 +130,18 @@ contract CryptoHeir is ReentrancyGuardTransient {
             // Native token deposit
             if (msg.value == 0) revert InsufficientAmount();
             amount = msg.value;
-
-            // Calculate 0.1% fee
-            depositFee = amount / 1000;
-            netAmount = amount - depositFee;
-
-            // Transfer fee to fee collector
-            (bool success, ) = feeCollector.call{value: depositFee}("");
-            require(success, "Fee transfer failed");
         } else {
             // ERC20 token deposit
             if (_amount == 0) revert InsufficientAmount();
             if (msg.value != 0) revert InvalidTokenTransfer();
             amount = _amount;
-
-            // Calculate 0.1% fee
-            depositFee = amount / 1000;
-            netAmount = amount - depositFee;
-
-            // Transfer tokens from sender to this contract
-            IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
-
-            // Transfer fee to fee collector
-            IERC20(_token).safeTransfer(feeCollector, depositFee);
         }
 
-        emit FeeCollected(feeCollector, _token, depositFee, "deposit");
+        // Calculate 0.1% fee
+        depositFee = amount / 1000;
+        netAmount = amount - depositFee;
 
+        // EFFECTS - State changes before external calls
         uint256 inheritanceId = nextInheritanceId++;
 
         inheritances[inheritanceId] = Inheritance({
@@ -167,7 +153,21 @@ contract CryptoHeir is ReentrancyGuardTransient {
             claimed: false
         });
 
+        emit FeeCollected(feeCollector, _token, depositFee, "deposit");
         emit InheritanceCreated(inheritanceId, msg.sender, _beneficiary, _token, netAmount, _deadline);
+
+        // INTERACTIONS - External calls last
+        if (_token == address(0)) {
+            // Transfer fee to fee collector
+            (bool success, ) = feeCollector.call{value: depositFee}("");
+            require(success, "Fee transfer failed");
+        } else {
+            // Transfer tokens from sender to this contract
+            IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
+
+            // Transfer fee to fee collector
+            IERC20(_token).safeTransfer(feeCollector, depositFee);
+        }
 
         return inheritanceId;
     }
